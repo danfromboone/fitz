@@ -38,6 +38,8 @@ dependencies {
     testImplementation('jakarta.servlet:jakarta.servlet-api:6.1.0')
 
     testImplementation("org.spockframework:spock-core:${spockVersion}")
+    testRuntimeOnly('net.bytebuddy:byte-buddy:1.18.15')
+    testRuntimeOnly('org.objenesis:objenesis:3.6')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher')
 }
 

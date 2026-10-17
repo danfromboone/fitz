@@ -6,10 +6,12 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.ServletRegistration;
 import jakarta.servlet.annotation.WebListener;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.List;
 
+@Getter
 @WebListener
 public class ApplicationContext implements ServletContextListener {
     private static final Logger log = LoggerFactory.getLogger(ApplicationContext.class);

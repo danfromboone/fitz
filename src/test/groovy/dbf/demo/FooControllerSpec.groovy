@@ -10,7 +10,8 @@ import spock.lang.Specification
 
 class FooControllerSpec extends Specification {
 
-    def controller = new FooController()
+    FooService fooService = Mock()
+    def controller = new FooController(fooService)
 
     def "canHandle returns true for GET requests to /foo"() {
         given:

@@ -43,7 +43,7 @@ class DispatcherServletIntegrationSpec extends Specification {
 
     def "dispatches /foo request to FooController and writes decoded request params to response"() {
         given:
-        def dispatcherServlet = new DispatcherServlet([new FooController()] as Set)
+        def dispatcherServlet = new DispatcherServlet([new FooController(Mock(FooService))] as Set)
         def outputBuffer = new ByteArrayOutputStream()
         def servletOutputStream = new CapturingServletOutputStream(outputBuffer)
 
@@ -72,7 +72,7 @@ class DispatcherServletIntegrationSpec extends Specification {
 
     def "returns 404 Not Found when no controller matches the request URI"() {
         given:
-        def dispatcherServlet = new DispatcherServlet([new FooController()] as Set)
+        def dispatcherServlet = new DispatcherServlet([new FooController(Mock(FooService))] as Set)
         def request = Mock(HttpServletRequest) {
             getMethod() >> "GET"
             getRequestURL() >> new StringBuffer("http://localhost:8080/demo/unknown")
@@ -101,7 +101,7 @@ class DispatcherServletIntegrationSpec extends Specification {
                 return new HttpResponse(HttpStatus.CREATED, "Handled by bar: " + req.body.asString())
             }
         }
-        def dispatcherServlet = new DispatcherServlet([new FooController(), barController] as Set)
+        def dispatcherServlet = new DispatcherServlet([new FooController(Mock(FooService)), barController] as Set)
         def outputBuffer = new ByteArrayOutputStream()
         def servletOutputStream = new CapturingServletOutputStream(outputBuffer)
 

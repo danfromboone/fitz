@@ -7,21 +7,21 @@ import spock.lang.Specification
 
 class ApplicationContextSpec extends Specification {
 
-    def "lazily initializes and returns controllers list"() {
+    def "wires application components and controllers in ApplicationContext"() {
         given:
         def context = new ApplicationContext()
 
-        when:
-        def firstCall = context.controllers
-        def secondCall = context.controllers
-
-        then:
-        firstCall.size() == 1
-        firstCall[0] instanceof FooController
-        firstCall.is(secondCall)
+        expect:
+        context.dataConfig != null
+        context.fooRepository != null
+        context.fooService != null
+        context.gooRepository != null
+        context.gooService != null
+        context.fooController != null
+        context.controllers == [context.fooController]
     }
 
-    def "lazily initializes DispatcherServlet with controllers from context"() {
+    def "initializes DispatcherServlet with controllers from context"() {
         given:
         def context = new ApplicationContext()
 
