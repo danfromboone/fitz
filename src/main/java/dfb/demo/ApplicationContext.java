@@ -1,5 +1,6 @@
 package dfb.demo;
 
+import dfb.di.Closeables;
 import dfb.di.web.Controller;
 import dfb.di.web.DispatcherServlet;
 import dfb.di.property.CompositePropertySource;
@@ -13,8 +14,6 @@ import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.ServletRegistration;
 import jakarta.servlet.annotation.WebListener;
 import lombok.Getter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.List;
@@ -22,7 +21,6 @@ import java.util.List;
 @Getter
 @WebListener
 public class ApplicationContext implements ServletContextListener {
-    private static final Logger log = LoggerFactory.getLogger(ApplicationContext.class);
 
     private final MutablePropertySource propertySource;
 
@@ -73,12 +71,6 @@ public class ApplicationContext implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-        if (propertySource instanceof AutoCloseable closeable) {
-            try {
-                closeable.close();
-            } catch (Exception e) {
-                log.warn("Failed to close propertySource", e);
-            }
-        }
+        Closeables.closeQuietly(propertySource);
     }
 }

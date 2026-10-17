@@ -1,5 +1,6 @@
 package dfb.di.property;
 
+import dfb.di.Closeables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -205,9 +206,7 @@ public class DecryptingPropertySource implements MutablePropertySource, AutoClos
      * Closes the underlying delegate if it implements {@link AutoCloseable}.
      */
     @Override
-    public void close() throws Exception {
-        if (delegate instanceof AutoCloseable closeable) {
-            closeable.close();
-        }
+    public void close() {
+        Closeables.closeQuietly(delegate);
     }
 }

@@ -1,5 +1,6 @@
 package dfb.di.property;
 
+import dfb.di.Closeables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -201,14 +202,6 @@ public class CompositePropertySource implements MutablePropertySource, AutoClose
      */
     @Override
     public void close() {
-        for (PropertySource source : propertySources) {
-            if (source instanceof AutoCloseable closeable) {
-                try {
-                    closeable.close();
-                } catch (Exception e) {
-                    log.warn("Failed to close child PropertySource: {}", source, e);
-                }
-            }
-        }
+        Closeables.closeAllQuietly(propertySources);
     }
 }
