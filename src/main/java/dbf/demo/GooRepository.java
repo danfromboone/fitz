@@ -2,16 +2,15 @@ package dbf.demo;
 
 import dbf.demo.domain.Goo;
 
-import java.sql.Connection;
+import javax.sql.DataSource;
 import java.util.Set;
-import java.util.function.Supplier;
 
 public class GooRepository {
 
-    private final Supplier<Connection> connectionSupplier;
+    private final DataSource dataSource;
 
-    public GooRepository(Supplier<Connection> connectionSupplier) {
-        this.connectionSupplier = connectionSupplier;
+    public GooRepository(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     Set<Goo> getAll() {

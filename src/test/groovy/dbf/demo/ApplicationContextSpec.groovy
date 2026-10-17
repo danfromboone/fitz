@@ -7,18 +7,25 @@ import spock.lang.Specification
 
 class ApplicationContextSpec extends Specification {
 
-    def "wires application components and controllers in ApplicationContext"() {
+    def "wires application components, property sources, and controllers in ApplicationContext"() {
         given:
         def context = new ApplicationContext()
 
         expect:
-        context.dataConfig != null
+        context.propertySource != null
+        context.dataContext != null
+        (context.dataContext.dataSource as MutableDataSource).databaseConfig.url == "jdbc://goo/bar"
+        (context.dataContext.dataSource as MutableDataSource).databaseConfig.userName == "goo"
+        (context.dataContext.dataSource as MutableDataSource).databaseConfig.password == "goopassword"
         context.fooRepository != null
         context.fooService != null
         context.gooRepository != null
         context.gooService != null
         context.fooController != null
         context.controllers == [context.fooController]
+
+        cleanup:
+        context.contextDestroyed(null)
     }
 
     def "initializes DispatcherServlet with controllers from context"() {

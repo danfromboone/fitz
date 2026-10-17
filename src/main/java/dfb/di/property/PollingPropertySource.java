@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
  * for changes, caches the latest snapshot, and notifies registered {@link PropertyChangeListener}s
  * with a {@link PropertyChangeEvent} whenever properties are added, modified, or removed.
  */
-public class PollingPropertySource implements PropertySource, AutoCloseable {
+public class PollingPropertySource implements MutablePropertySource, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(PollingPropertySource.class);
 
     private final PropertySource delegate;
@@ -96,9 +96,20 @@ public class PollingPropertySource implements PropertySource, AutoCloseable {
      * @param listener the listener to register (must not be {@code null})
      * @throws NullPointerException if {@code listener} is {@code null}
      */
-    public void addListener(PropertyChangeListener listener) {
+    @Override
+    public void registerListener(PropertyChangeListener listener) {
         Objects.requireNonNull(listener, "listener must not be null");
         listeners.add(listener);
+    }
+
+    /**
+     * Registers a listener to be notified when property changes are detected during polling.
+     *
+     * @param listener the listener to register (must not be {@code null})
+     * @throws NullPointerException if {@code listener} is {@code null}
+     */
+    public void addListener(PropertyChangeListener listener) {
+        registerListener(listener);
     }
 
     /**
