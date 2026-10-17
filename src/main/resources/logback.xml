@@ -5,7 +5,7 @@
         </encoder>
     </appender>
 
-    <logger name="dbf.demo" level="DEBUG" />
+    <logger name="dfb" level="DEBUG" />
 
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
