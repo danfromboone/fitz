@@ -2,6 +2,7 @@ package dfb.di.http;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;
+import java.util.Objects;
 
 /**
  * Enumeration of standard HTTP request methods.
@@ -29,25 +30,30 @@ public enum HttpMethod {
     /**
      * Parses a method string (case-insensitive, trimmed) into an {@code HttpMethod}.
      *
-     * @param method the HTTP method name; may be {@code null} or blank
-     * @return the matching {@code HttpMethod}, or {@code null} if {@code method} is {@code null} or blank
-     * @throws IllegalArgumentException if the method name does not match a known {@code HttpMethod}
+     * @param method the HTTP method name (must not be {@code null} or blank)
+     * @return the matching {@code HttpMethod}
+     * @throws NullPointerException     if {@code method} is {@code null}
+     * @throws IllegalArgumentException if the method name is blank or does not match a known {@code HttpMethod}
      */
     public static HttpMethod from(String method) {
-        if (method == null || method.isBlank()) {
-            return null;
+        Objects.requireNonNull(method, "method must not be null");
+        String trimmed = method.trim();
+        if (trimmed.isEmpty()) {
+            throw new IllegalArgumentException("method must not be blank");
         }
-        return HttpMethod.valueOf(method.trim().toUpperCase(Locale.ROOT));
+        return HttpMethod.valueOf(trimmed.toUpperCase(Locale.ROOT));
     }
 
     /**
      * Extracts and parses the {@code HttpMethod} from an {@link HttpServletRequest}.
      *
-     * @param request the servlet request; may be {@code null}
-     * @return the corresponding {@code HttpMethod}, or {@code null} if the request or its method is {@code null}
-     * @throws IllegalArgumentException if the servlet request method does not match a known {@code HttpMethod}
+     * @param request the servlet request (must not be {@code null})
+     * @return the corresponding {@code HttpMethod}
+     * @throws NullPointerException     if {@code request} or its method is {@code null}
+     * @throws IllegalArgumentException if the servlet request method is blank or does not match a known {@code HttpMethod}
      */
     public static HttpMethod from(HttpServletRequest request) {
-        return (request != null) ? from(request.getMethod()) : null;
+        Objects.requireNonNull(request, "request must not be null");
+        return from(request.getMethod());
     }
 }

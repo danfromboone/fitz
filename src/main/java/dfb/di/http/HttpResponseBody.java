@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Immutable representation of an HTTP response payload.
@@ -35,10 +36,11 @@ public class HttpResponseBody {
      * Creates an {@code HttpResponseBody} from a string using the specified character set.
      *
      * @param content the string content; if {@code null}, an empty body is created
-     * @param charset the character set used to encode the string; defaults to UTF-8 if {@code null}
+     * @param charset the character set used to encode the string (must not be {@code null})
+     * @throws NullPointerException if {@code charset} is {@code null}
      */
     public HttpResponseBody(String content, Charset charset) {
-        this.charset = (charset != null) ? charset : StandardCharsets.UTF_8;
+        this.charset = Objects.requireNonNull(charset, "charset must not be null");
         this.bytes = (content != null) ? content.getBytes(this.charset) : new byte[0];
     }
 
@@ -55,10 +57,11 @@ public class HttpResponseBody {
      * Creates an {@code HttpResponseBody} from a byte array and default character set.
      *
      * @param bytes   the payload bytes (defensively copied); if {@code null}, an empty body is created
-     * @param charset the default character set for string conversion; defaults to UTF-8 if {@code null}
+     * @param charset the default character set for string conversion (must not be {@code null})
+     * @throws NullPointerException if {@code charset} is {@code null}
      */
     public HttpResponseBody(byte[] bytes, Charset charset) {
-        this.charset = (charset != null) ? charset : StandardCharsets.UTF_8;
+        this.charset = Objects.requireNonNull(charset, "charset must not be null");
         this.bytes = (bytes != null) ? bytes.clone() : new byte[0];
     }
 
@@ -105,12 +108,13 @@ public class HttpResponseBody {
     /**
      * Decodes this response body as a string using the specified character set.
      *
-     * @param targetCharset the character set to decode with; if {@code null}, {@link #getCharset()} is used
+     * @param targetCharset the character set to decode with (must not be {@code null})
      * @return the decoded string
+     * @throws NullPointerException if {@code targetCharset} is {@code null}
      */
     public String asString(Charset targetCharset) {
-        Charset effectiveCharset = (targetCharset != null) ? targetCharset : this.charset;
-        return new String(bytes, effectiveCharset);
+        Objects.requireNonNull(targetCharset, "targetCharset must not be null");
+        return new String(bytes, targetCharset);
     }
 
     /**
@@ -152,11 +156,13 @@ public class HttpResponseBody {
     /**
      * Writes the response body bytes to the given {@link OutputStream} if non-empty.
      *
-     * @param outputStream the output stream to write to (ignored if {@code null})
-     * @throws IOException if an I/O error occurs while writing
+     * @param outputStream the output stream to write to (must not be {@code null})
+     * @throws NullPointerException if {@code outputStream} is {@code null}
+     * @throws IOException          if an I/O error occurs while writing
      */
     public void writeTo(OutputStream outputStream) throws IOException {
-        if (outputStream != null && bytes.length > 0) {
+        Objects.requireNonNull(outputStream, "outputStream must not be null");
+        if (bytes.length > 0) {
             outputStream.write(bytes);
         }
     }

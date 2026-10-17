@@ -1,9 +1,5 @@
 package dfb.di.http
 
-import dfb.di.http.HttpHeaders
-import dfb.di.http.HttpResponse
-import dfb.di.http.HttpResponseBody
-import dfb.di.http.HttpStatus
 import spock.lang.Specification
 
 class HttpResponseSpec extends Specification {
@@ -18,7 +14,7 @@ class HttpResponseSpec extends Specification {
         response.headers.isEmpty()
     }
 
-    def "supports setting statusCode, body, and headers"() {
+    def "supports setting statusCode, body, and headers and allows null body and headers"() {
         given:
         def headers = new HttpHeaders()
         headers.set("X-Test", "123")
@@ -38,5 +34,27 @@ class HttpResponseSpec extends Specification {
         then:
         response.statusCode == HttpStatus.ACCEPTED
         response.body.asString() == "updated"
+
+        when:
+        def nullBodyAndHeaders = new HttpResponse(HttpStatus.NO_CONTENT, (HttpResponseBody) null, null)
+
+        then:
+        nullBodyAndHeaders.statusCode == HttpStatus.NO_CONTENT
+        nullBodyAndHeaders.body.isEmpty()
+        nullBodyAndHeaders.headers.isEmpty()
+    }
+
+    def "throws NullPointerException when statusCode is null"() {
+        when:
+        new HttpResponse(null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        new HttpResponse().setStatusCode(null)
+
+        then:
+        thrown(NullPointerException)
     }
 }

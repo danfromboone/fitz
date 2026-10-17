@@ -32,25 +32,27 @@ public class HttpRequest {
      * Creates an {@code HttpRequest} with the given HTTP method and URI string,
      * empty headers, and an empty body.
      *
-     * @param method the HTTP method
-     * @param uri    the request URI string
+     * @param method the HTTP method (must not be {@code null})
+     * @param uri    the request URI string (must not be {@code null} or blank)
+     * @throws NullPointerException     if {@code method} or {@code uri} is {@code null}
+     * @throws IllegalArgumentException if {@code uri} is blank or invalid
      */
     public HttpRequest(HttpMethod method, String uri) {
-        this(method, new HttpUri(uri), new HttpHeaders(), new HttpRequestBody(""));
+        this(method, new HttpUri(uri), null, null);
     }
 
     /**
      * Creates an {@code HttpRequest} with explicit components.
      *
-     * @param method  the HTTP method
+     * @param method  the HTTP method (must not be {@code null})
      * @param httpUri the parsed {@link HttpUri} (must not be {@code null})
      * @param headers the request headers; if {@code null}, empty headers are used
      * @param body    the request body; if {@code null}, an empty body is used
-     * @throws NullPointerException if {@code httpUri} is {@code null}
+     * @throws NullPointerException if {@code method} or {@code httpUri} is {@code null}
      */
     public HttpRequest(HttpMethod method, HttpUri httpUri, HttpHeaders headers, HttpRequestBody body) {
         this.request = null;
-        this.method = method;
+        this.method = Objects.requireNonNull(method, "method must not be null");
         this.httpUri = Objects.requireNonNull(httpUri, "httpUri must not be null");
         this.headers = (headers != null) ? headers : new HttpHeaders();
         this.body = (body != null) ? body : new HttpRequestBody("");
@@ -68,7 +70,7 @@ public class HttpRequest {
     /**
      * Returns the parsed {@link HttpUri} for this request.
      *
-     * @return the request URI
+     * @return the request URI (never {@code null})
      */
     public HttpUri getHttpUri() {
         return httpUri;
@@ -77,7 +79,7 @@ public class HttpRequest {
     /**
      * Returns the parsed query parameters from the request URI.
      *
-     * @return the {@link HttpQueryParams} for this request
+     * @return the {@link HttpQueryParams} for this request (never {@code null})
      */
     public HttpQueryParams getQueryParams() {
         return httpUri.getQueryParams();
@@ -86,7 +88,7 @@ public class HttpRequest {
     /**
      * Returns the HTTP method of this request.
      *
-     * @return the {@link HttpMethod}
+     * @return the {@link HttpMethod} (never {@code null})
      */
     public HttpMethod getMethod() {
         return method;
@@ -95,7 +97,7 @@ public class HttpRequest {
     /**
      * Returns the HTTP headers of this request.
      *
-     * @return the {@link HttpHeaders}
+     * @return the {@link HttpHeaders} (never {@code null})
      */
     public HttpHeaders getHeaders() {
         return headers;
@@ -104,7 +106,7 @@ public class HttpRequest {
     /**
      * Returns the body of this request.
      *
-     * @return the {@link HttpRequestBody}
+     * @return the {@link HttpRequestBody} (never {@code null})
      */
     public HttpRequestBody getBody() {
         return body;

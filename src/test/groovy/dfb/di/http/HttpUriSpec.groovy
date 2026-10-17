@@ -1,14 +1,15 @@
 package dfb.di.http
 
-import dfb.di.http.HttpUri
 import jakarta.servlet.http.HttpServletRequest
 import spock.lang.Specification
 
+import java.util.regex.Pattern
+
 class HttpUriSpec extends Specification {
 
-    def "constructs HttpUri from a single URI string"() {
+    def "constructs HttpUri from a single URI string and trims whitespace"() {
         when:
-        def httpUri = new HttpUri("https://example.com/items?name=John%20Doe&tag=a&tag=b")
+        def httpUri = new HttpUri("  https://example.com/items?name=John%20Doe&tag=a&tag=b  ")
 
         then:
         httpUri.uri == URI.create("https://example.com/items?name=John%20Doe&tag=a&tag=b")
@@ -22,7 +23,7 @@ class HttpUriSpec extends Specification {
 
     def "constructs HttpUri from separate base URI and query string"() {
         when:
-        def httpUri = new HttpUri("https://example.com/search", "q=hello%20world&page=2")
+        def httpUri = new HttpUri("  https://example.com/search  ", "  q=hello%20world&page=2  ")
 
         then:
         httpUri.rawUri == "https://example.com/search?q=hello%20world&page=2"
@@ -38,6 +39,8 @@ class HttpUriSpec extends Specification {
         new HttpUri("https://example.com/search?a=1", "b=2").rawUri == "https://example.com/search?a=1&b=2"
         new HttpUri("https://example.com/search", null).rawUri == "https://example.com/search"
         new HttpUri("https://example.com/search", "").rawUri == "https://example.com/search"
+        new HttpUri("https://example.com/search", "   ").rawUri == "https://example.com/search"
+        new HttpUri("https://example.com/search", "?").rawUri == "https://example.com/search"
     }
 
     def "constructs HttpUri from HttpServletRequest with requestURL and queryString"() {
@@ -77,27 +80,36 @@ class HttpUriSpec extends Specification {
         httpUri.queryParams.isEmpty()
     }
 
-    def "throws NullPointerException when constructing from null HttpServletRequest"() {
+    def "throws NullPointerException or IllegalArgumentException on null or blank URI inputs"() {
         when:
         HttpUri.from(null)
 
         then:
         thrown(NullPointerException)
-    }
 
-    def "handles null URI string gracefully"() {
         when:
-        def httpUri = new HttpUri(null)
+        new HttpUri(null)
 
         then:
-        httpUri.uri == null
-        httpUri.path == null
-        httpUri.rawUri == null
-        httpUri.query == null
-        httpUri.rawQuery == null
-        httpUri.queryParams.isEmpty()
-        !httpUri.matches(".*/foo")
-        httpUri.toString() == null
+        thrown(NullPointerException)
+
+        when:
+        new HttpUri("   ")
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        new HttpUri(null, "a=1")
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        new HttpUri("  ", "a=1")
+
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def "supports getPath and regex matching against path or full URI"() {
@@ -106,10 +118,27 @@ class HttpUriSpec extends Specification {
 
         expect:
         httpUri.path == "/demo/foo"
-        httpUri.matches(".*/foo")
+        httpUri.matches("  .*/foo  ")
         httpUri.matches(~/.+\/foo/)
         !httpUri.matches(".*/bar")
-        !httpUri.matches((String) null)
+
+        when:
+        httpUri.matches((String) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        httpUri.matches((Pattern) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        httpUri.matches("   ")
+
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def "extracts named path parameters using regex capturing groups"() {
@@ -117,11 +146,28 @@ class HttpUriSpec extends Specification {
         def httpUri = new HttpUri("http://localhost:8080/demo/users/42/orders/99?detail=full")
 
         when:
-        def pathParams = httpUri.extractPathParams(".*/users/(?<userId>[^/]+)/orders/(?<orderId>[^/]+)")
+        def pathParams = httpUri.extractPathParams("  .*/users/(?<userId>[^/]+)/orders/(?<orderId>[^/]+)  ")
 
         then:
         pathParams == [userId: "42", orderId: "99"]
         httpUri.extractPathParams(".*/non-matching/(?<id>[^/]+)").isEmpty()
-        httpUri.extractPathParams((String) null).isEmpty()
+
+        when:
+        httpUri.extractPathParams((String) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        httpUri.extractPathParams((Pattern) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        httpUri.extractPathParams("   ")
+
+        then:
+        thrown(IllegalArgumentException)
     }
 }

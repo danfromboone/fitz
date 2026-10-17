@@ -9,6 +9,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Encapsulates the body of an {@link HttpRequest}.
@@ -25,10 +26,11 @@ public class HttpRequestBody {
     /**
      * Creates an {@code HttpRequestBody} that lazily reads its content from the given servlet request.
      *
-     * @param request the underlying servlet request; may be {@code null}
+     * @param request the underlying servlet request (must not be {@code null})
+     * @throws NullPointerException if {@code request} is {@code null}
      */
     public HttpRequestBody(HttpServletRequest request) {
-        this.request = request;
+        this.request = Objects.requireNonNull(request, "request must not be null");
     }
 
     /**
@@ -44,11 +46,12 @@ public class HttpRequestBody {
      * Creates an {@code HttpRequestBody} from a string using the specified character encoding.
      *
      * @param content the string content; if {@code null}, an empty body is created
-     * @param charset the character set used to encode the string; defaults to UTF-8 if {@code null}
+     * @param charset the character set used to encode the string (must not be {@code null})
+     * @throws NullPointerException if {@code charset} is {@code null}
      */
     public HttpRequestBody(String content, Charset charset) {
         this.request = null;
-        this.charset = (charset != null) ? charset : StandardCharsets.UTF_8;
+        this.charset = Objects.requireNonNull(charset, "charset must not be null");
         this.bytes = (content != null) ? content.getBytes(this.charset) : new byte[0];
     }
 
@@ -65,19 +68,21 @@ public class HttpRequestBody {
      * Creates an {@code HttpRequestBody} from a byte array and default character set.
      *
      * @param bytes   the body bytes (defensively copied); if {@code null}, an empty body is created
-     * @param charset the default character set for string conversion; defaults to UTF-8 if {@code null}
+     * @param charset the default character set for string conversion (must not be {@code null})
+     * @throws NullPointerException if {@code charset} is {@code null}
      */
     public HttpRequestBody(byte[] bytes, Charset charset) {
         this.request = null;
-        this.charset = (charset != null) ? charset : StandardCharsets.UTF_8;
+        this.charset = Objects.requireNonNull(charset, "charset must not be null");
         this.bytes = (bytes != null) ? bytes.clone() : new byte[0];
     }
 
     /**
      * Factory method that creates an {@code HttpRequestBody} backed by an {@link HttpServletRequest}.
      *
-     * @param request the servlet request; may be {@code null}
+     * @param request the servlet request (must not be {@code null})
      * @return a new {@code HttpRequestBody}
+     * @throws NullPointerException if {@code request} is {@code null}
      */
     public static HttpRequestBody from(HttpServletRequest request) {
         return new HttpRequestBody(request);
@@ -96,13 +101,14 @@ public class HttpRequestBody {
     /**
      * Returns the body content decoded as a string using the specified character set.
      *
-     * @param targetCharset the charset to decode with; if {@code null}, {@link #getCharset()} is used
+     * @param targetCharset the charset to decode with (must not be {@code null})
      * @return the decoded body string
+     * @throws NullPointerException if {@code targetCharset} is {@code null}
      * @throws UncheckedIOException if reading from the underlying servlet request fails
      */
     public String asString(Charset targetCharset) {
-        Charset effectiveCharset = (targetCharset != null) ? targetCharset : getCharset();
-        return new String(ensureLoaded(), effectiveCharset);
+        Objects.requireNonNull(targetCharset, "targetCharset must not be null");
+        return new String(ensureLoaded(), targetCharset);
     }
 
     /**
@@ -156,9 +162,6 @@ public class HttpRequestBody {
     }
 
     private byte[] readBytes() {
-        if (request == null) {
-            return new byte[0];
-        }
         Charset effectiveCharset = getCharset();
         try {
             InputStream inputStream = request.getInputStream();
@@ -178,14 +181,12 @@ public class HttpRequestBody {
     }
 
     private static Charset resolveCharset(HttpServletRequest request) {
-        if (request != null) {
-            String encoding = request.getCharacterEncoding();
-            if (encoding != null && !encoding.isBlank()) {
-                try {
-                    return Charset.forName(encoding);
-                } catch (Exception ignored) {
-                    // Fallback to UTF-8
-                }
+        String encoding = request.getCharacterEncoding();
+        if (encoding != null && !encoding.isBlank()) {
+            try {
+                return Charset.forName(encoding.trim());
+            } catch (Exception ignored) {
+                // Fallback to UTF-8
             }
         }
         return StandardCharsets.UTF_8;

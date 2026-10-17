@@ -1,18 +1,18 @@
 package dfb.di.http
 
-import dfb.di.http.HttpQueryParams
 import spock.lang.Specification
 
 class QueryParamsSpec extends Specification {
 
-    def "parses single and multiple values from query string"() {
+    def "parses single and multiple values from query string and trims keys and values"() {
         when:
-        def queryParams = new HttpQueryParams("name=Alice&tag=java&tag=groovy")
+        def queryParams = new HttpQueryParams("  name = Alice & tag = java & tag = groovy  ")
 
         then:
         !queryParams.isEmpty()
         queryParams.keys == ["name", "tag"] as Set
         queryParams.getFirst("name") == "Alice"
+        queryParams.getFirst("  name  ") == "Alice"
         queryParams.getValues("name") == ["Alice"]
         queryParams.getFirst("tag") == "java"
         queryParams.getValues("tag") == ["java", "groovy"]
@@ -25,6 +25,7 @@ class QueryParamsSpec extends Specification {
 
         then:
         queryParams.containsKey("flag")
+        queryParams.containsKey("  flag  ")
         queryParams.getValues("flag") == []
         queryParams.getFirst("flag") == null
 
@@ -50,11 +51,10 @@ class QueryParamsSpec extends Specification {
         queryParams.getValues("noVal") == []
     }
 
-    def "returns empty collection views for null or empty query"() {
+    def "returns empty collection views for empty query or URI without query"() {
         expect:
-        new HttpQueryParams((String) null).isEmpty()
         new HttpQueryParams("").isEmpty()
-        new HttpQueryParams((URI) null).isEmpty()
+        new HttpQueryParams("   ").isEmpty()
         new HttpQueryParams(URI.create("https://example.com/no-query")).isEmpty()
 
         and:
@@ -64,6 +64,65 @@ class QueryParamsSpec extends Specification {
         emptyParams.getValues("missing") == []
         emptyParams.getFirst("missing") == null
         !emptyParams.containsKey("missing")
+    }
+
+    def "throws NullPointerException or IllegalArgumentException on invalid inputs"() {
+        given:
+        def queryParams = new HttpQueryParams("a=1")
+
+        when:
+        new HttpQueryParams((String) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        new HttpQueryParams((URI) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        new HttpQueryParams("=valueWithoutKey")
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        queryParams.getValues(null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        queryParams.getValues("   ")
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        queryParams.getFirst(null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        queryParams.getFirst("")
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        queryParams.containsKey(null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        queryParams.containsKey(" ")
+
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def "returned map and value lists are unmodifiable"() {

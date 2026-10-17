@@ -120,21 +120,17 @@ public class DispatcherServlet extends HttpServlet {
             return;
         }
 
-        HttpStatus status = httpResponse.getStatusCode();
-        servletResponse.setStatus((status != null) ? status.getCode() : HttpStatus.OK.getCode());
+        servletResponse.setStatus(httpResponse.getStatusCode().getCode());
 
-        HttpHeaders headers = httpResponse.getHeaders();
-        if (headers != null) {
-            for (Map.Entry<String, List<String>> entry : headers.asMap().entrySet()) {
-                String name = entry.getKey();
-                for (String value : entry.getValue()) {
-                    servletResponse.addHeader(name, value);
-                }
+        for (Map.Entry<String, List<String>> entry : httpResponse.getHeaders().asMap().entrySet()) {
+            String name = entry.getKey();
+            for (String value : entry.getValue()) {
+                servletResponse.addHeader(name, value);
             }
         }
 
         HttpResponseBody body = httpResponse.getBody();
-        if (body != null && !body.isEmpty()) {
+        if (!body.isEmpty()) {
             body.writeTo(servletResponse.getOutputStream());
         }
     }

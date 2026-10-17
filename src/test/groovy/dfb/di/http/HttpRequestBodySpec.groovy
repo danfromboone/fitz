@@ -1,11 +1,11 @@
 package dfb.di.http
 
-import dfb.di.http.HttpRequestBody
 import jakarta.servlet.ReadListener
 import jakarta.servlet.ServletInputStream
 import jakarta.servlet.http.HttpServletRequest
 import spock.lang.Specification
 
+import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 class HttpRequestBodySpec extends Specification {
@@ -20,7 +20,7 @@ class HttpRequestBodySpec extends Specification {
         def secondRead = body.asString()
 
         then:
-        1 * request.getCharacterEncoding() >> "UTF-8"
+        1 * request.getCharacterEncoding() >> "  UTF-8  "
         1 * request.getInputStream() >> null
         1 * request.getReader() >> new BufferedReader(new StringReader("hello request body"))
         firstRead == "hello request body"
@@ -51,7 +51,7 @@ class HttpRequestBodySpec extends Specification {
         body.asBytes() == bytes
     }
 
-    def "constructs directly from String or byte array"() {
+    def "constructs directly from String or byte array and allows null content for empty body"() {
         when:
         def fromString = new HttpRequestBody("direct text")
         def fromBytes = new HttpRequestBody("direct text".getBytes(StandardCharsets.UTF_8))
@@ -63,5 +63,31 @@ class HttpRequestBodySpec extends Specification {
         fromString.toString() == "direct text"
         emptyBody.isEmpty()
         emptyBody.length() == 0
+    }
+
+    def "throws NullPointerException when request or charset is null"() {
+        when:
+        new HttpRequestBody((HttpServletRequest) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        new HttpRequestBody("text", (Charset) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        new HttpRequestBody(new byte[0], (Charset) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        new HttpRequestBody("text").asString(null)
+
+        then:
+        thrown(NullPointerException)
     }
 }

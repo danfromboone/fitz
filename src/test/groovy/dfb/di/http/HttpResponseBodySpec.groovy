@@ -1,8 +1,8 @@
 package dfb.di.http
 
-import dfb.di.http.HttpResponseBody
 import spock.lang.Specification
 
+import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 class HttpResponseBodySpec extends Specification {
@@ -32,5 +32,31 @@ class HttpResponseBodySpec extends Specification {
         HttpResponseBody.of("").is(HttpResponseBody.empty())
         HttpResponseBody.of((byte[]) null).is(HttpResponseBody.empty())
         HttpResponseBody.of(new byte[0]).is(HttpResponseBody.empty())
+    }
+
+    def "throws NullPointerException when charset or OutputStream is null"() {
+        when:
+        new HttpResponseBody("text", (Charset) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        new HttpResponseBody(new byte[0], (Charset) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        HttpResponseBody.of("text").asString(null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        HttpResponseBody.of("text").writeTo(null)
+
+        then:
+        thrown(NullPointerException)
     }
 }

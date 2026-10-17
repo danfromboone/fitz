@@ -1,10 +1,5 @@
 package dfb.di.http
 
-import dfb.di.http.HttpHeaders
-import dfb.di.http.HttpMethod
-import dfb.di.http.HttpRequest
-import dfb.di.http.HttpRequestBody
-import dfb.di.http.HttpUri
 import jakarta.servlet.http.HttpServletRequest
 import spock.lang.Specification
 
@@ -43,7 +38,7 @@ class HttpRequestSpec extends Specification {
         httpRequest.body.asString() == "request-content"
     }
 
-    def "constructs directly from domain objects without HttpServletRequest"() {
+    def "constructs directly from domain objects and allows null headers and body"() {
         given:
         def headers = new HttpHeaders([Accept: ["application/json"]])
         def body = new HttpRequestBody('{"hello":"world"}')
@@ -54,6 +49,12 @@ class HttpRequestSpec extends Specification {
                 new HttpUri("http://localhost:8080/demo/items/42?notify=true"),
                 headers,
                 body
+        )
+        def withNullHeadersAndBody = new HttpRequest(
+                HttpMethod.GET,
+                new HttpUri("http://localhost:8080/demo/items/42"),
+                null,
+                null
         )
 
         then:
@@ -66,11 +67,26 @@ class HttpRequestSpec extends Specification {
         httpRequest.pathInfo == null
         httpRequest.headers.getFirst("accept") == "application/json"
         httpRequest.body.asString() == '{"hello":"world"}'
+
+        withNullHeadersAndBody.headers.isEmpty()
+        withNullHeadersAndBody.body.isEmpty()
     }
 
-    def "throws NullPointerException when constructed with null HttpServletRequest"() {
+    def "throws NullPointerException when constructed with null HttpServletRequest, HttpMethod, or HttpUri"() {
         when:
         new HttpRequest((HttpServletRequest) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        new HttpRequest(null, "http://localhost:8080/foo")
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        new HttpRequest(HttpMethod.GET, (HttpUri) null, null, null)
 
         then:
         thrown(NullPointerException)

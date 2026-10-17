@@ -1,26 +1,25 @@
 package dfb.di.http
 
-import dfb.di.http.HttpHeaders
 import jakarta.servlet.http.HttpServletRequest
 import spock.lang.Specification
 
 class HttpHeadersSpec extends Specification {
 
-    def "supports case-insensitive header lookup, set, and add"() {
+    def "supports case-insensitive header lookup, set, and add with trimming"() {
         given:
         def headers = new HttpHeaders()
 
         when:
-        headers.add("Accept", "text/html")
+        headers.add("  Accept  ", "  text/html  ")
         headers.add("accept", "application/xhtml+xml")
-        headers.set("Content-Type", "application/json")
+        headers.set("  Content-Type  ", "  application/json  ")
 
         then:
         !headers.isEmpty()
         headers.contains("ACCEPT")
-        headers.contains("content-type")
+        headers.contains("  content-type  ")
         headers.getValues("Accept") == ["text/html", "application/xhtml+xml"]
-        headers.getFirst("ACCEPT") == "text/html"
+        headers.getFirst("  ACCEPT  ") == "text/html"
         headers.getFirst("content-type") == "application/json"
 
         when:
@@ -30,12 +29,12 @@ class HttpHeadersSpec extends Specification {
         headers.getValues("accept") == ["text/plain"]
     }
 
-    def "extracts headers from HttpServletRequest"() {
+    def "extracts and trims headers from HttpServletRequest"() {
         given:
         def request = Mock(HttpServletRequest) {
             getHeaderNames() >> Collections.enumeration(["X-Custom", "Authorization"])
-            getHeaders("X-Custom") >> Collections.enumeration(["val1", "val2"])
-            getHeaders("Authorization") >> Collections.enumeration(["Bearer token"])
+            getHeaders("X-Custom") >> Collections.enumeration([" val1 ", "val2"])
+            getHeaders("Authorization") >> Collections.enumeration([" Bearer token "])
         }
 
         when:
@@ -48,16 +47,65 @@ class HttpHeadersSpec extends Specification {
         headers.asMap()["X-CUSTOM"] == ["val1", "val2"]
     }
 
-    def "constructs from initial map and handles null inputs safely"() {
+    def "constructs from initial map and validates inputs"() {
+        given:
+        def headers = new HttpHeaders(["  Host  ": ["  localhost:8080  "]])
+
+        expect:
+        headers.getFirst("host") == "localhost:8080"
+
         when:
-        def headers = new HttpHeaders([Host: ["localhost:8080"]])
+        new HttpHeaders((Map) null)
 
         then:
-        headers.getFirst("host") == "localhost:8080"
-        headers.getValues(null) == []
-        headers.getFirst(null) == null
-        !headers.contains(null)
-        new HttpHeaders((Map) null).isEmpty()
-        new HttpHeaders((HttpServletRequest) null).isEmpty()
+        thrown(NullPointerException)
+
+        when:
+        new HttpHeaders((HttpServletRequest) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        headers.getValues(null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        headers.getValues("   ")
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        headers.getFirst(null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        headers.contains("   ")
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        headers.set("   ", "val")
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        headers.set("X-Key", null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        headers.add("X-Key", null)
+
+        then:
+        thrown(NullPointerException)
     }
 }

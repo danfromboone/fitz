@@ -8,9 +8,9 @@ package dfb.di.http;
  * or {@link #of(int, String)}.
  */
 public final class HttpStatus {
-    private static final int MIN_PREDEFINED_CODE = 100;
-    private static final int MAX_PREDEFINED_CODE = 599;
-    private static final HttpStatus[] PREDEFINED = new HttpStatus[MAX_PREDEFINED_CODE + 1];
+    private static final int MIN_CODE = 100;
+    private static final int MAX_CODE = 599;
+    private static final HttpStatus[] PREDEFINED = new HttpStatus[MAX_CODE + 1];
 
     // 1xx Informational
     /** {@code 100 Continue}. */
@@ -88,19 +88,25 @@ public final class HttpStatus {
         return status;
     }
 
+    private static void validateCode(int code) {
+        if (code < MIN_CODE || code > MAX_CODE) {
+            throw new IllegalArgumentException("HTTP status code must be between " + MIN_CODE + " and " + MAX_CODE + ": " + code);
+        }
+    }
+
     /**
      * Returns the predefined {@code HttpStatus} instance for the given numeric status code if one
      * exists, or creates a new {@code HttpStatus} with an empty reason phrase for non-standard codes.
      *
-     * @param code the numeric HTTP status code
+     * @param code the numeric HTTP status code (must be between 100 and 599)
      * @return the cached predefined {@code HttpStatus} or a new instance for custom codes
+     * @throws IllegalArgumentException if {@code code} is outside the valid range {@code 100..599}
      */
     public static HttpStatus of(int code) {
-        if (code >= MIN_PREDEFINED_CODE && code <= MAX_PREDEFINED_CODE) {
-            HttpStatus predefined = PREDEFINED[code];
-            if (predefined != null) {
-                return predefined;
-            }
+        validateCode(code);
+        HttpStatus predefined = PREDEFINED[code];
+        if (predefined != null) {
+            return predefined;
         }
         return new HttpStatus(code, "");
     }
@@ -108,21 +114,22 @@ public final class HttpStatus {
     /**
      * Returns the predefined {@code HttpStatus} instance if one exists with the given numeric status
      * code and a matching (or unspecified) reason phrase; otherwise creates a new {@code HttpStatus}
-     * with the given code and reason phrase.
+     * with the given code and trimmed reason phrase.
      *
-     * @param code         the numeric HTTP status code
-     * @param reasonPhrase the human-readable reason phrase
+     * @param code         the numeric HTTP status code (must be between 100 and 599)
+     * @param reasonPhrase the human-readable reason phrase (trimmed; {@code null} treated as empty)
      * @return the cached predefined {@code HttpStatus} or a new instance
+     * @throws IllegalArgumentException if {@code code} is outside the valid range {@code 100..599}
      */
     public static HttpStatus of(int code, String reasonPhrase) {
-        if (code >= MIN_PREDEFINED_CODE && code <= MAX_PREDEFINED_CODE) {
-            HttpStatus predefined = PREDEFINED[code];
-            if (predefined != null
-                    && (reasonPhrase == null || reasonPhrase.isEmpty() || predefined.reasonPhrase.equals(reasonPhrase))) {
-                return predefined;
-            }
+        validateCode(code);
+        String trimmedReason = (reasonPhrase != null) ? reasonPhrase.trim() : "";
+        HttpStatus predefined = PREDEFINED[code];
+        if (predefined != null
+                && (trimmedReason.isEmpty() || predefined.reasonPhrase.equals(trimmedReason))) {
+            return predefined;
         }
-        return new HttpStatus(code, reasonPhrase != null ? reasonPhrase : "");
+        return new HttpStatus(code, trimmedReason);
     }
 
     /**
@@ -157,7 +164,7 @@ public final class HttpStatus {
 
     @Override
     public String toString() {
-        return (reasonPhrase != null && !reasonPhrase.isEmpty())
+        return !reasonPhrase.isEmpty()
                 ? code + " " + reasonPhrase
                 : String.valueOf(code);
     }
