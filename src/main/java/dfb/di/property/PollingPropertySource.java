@@ -18,6 +18,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * A decorating {@link PropertySource} that periodically polls a delegate {@link PropertySource}
+ * for changes, caches the latest snapshot, and notifies registered {@link PropertyChangeListener}s
+ * with a {@link PropertyChangeEvent} whenever properties are added, modified, or removed.
+ */
 public class PollingPropertySource implements PropertySource, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(PollingPropertySource.class);
 
@@ -29,6 +34,14 @@ public class PollingPropertySource implements PropertySource, AutoCloseable {
 
     private volatile Map<String, String> cachedProperties;
 
+    /**
+     * Creates a {@code PollingPropertySource} using a dedicated daemon single-thread scheduled executor.
+     *
+     * @param delegate     the underlying property source to poll (must not be {@code null})
+     * @param pollInterval the delay between poll executions (must be positive and non-null)
+     * @throws NullPointerException     if {@code delegate} or {@code pollInterval} is {@code null}
+     * @throws IllegalArgumentException if {@code pollInterval} is zero or negative
+     */
     public PollingPropertySource(PropertySource delegate, Duration pollInterval) {
         this(
                 delegate,
@@ -42,6 +55,18 @@ public class PollingPropertySource implements PropertySource, AutoCloseable {
         );
     }
 
+    /**
+     * Creates a {@code PollingPropertySource} using a caller-supplied {@link ScheduledExecutorService}.
+     * <p>
+     * When {@link #close()} is called, the scheduled polling task is cancelled, but the caller-supplied
+     * executor is not shut down.
+     *
+     * @param delegate     the underlying property source to poll (must not be {@code null})
+     * @param pollInterval the delay between poll executions (must be positive and non-null)
+     * @param executor     the scheduled executor service to schedule polling tasks on (must not be {@code null})
+     * @throws NullPointerException     if any argument is {@code null}
+     * @throws IllegalArgumentException if {@code pollInterval} is zero or negative
+     */
     public PollingPropertySource(PropertySource delegate, Duration pollInterval, ScheduledExecutorService executor) {
         this(delegate, pollInterval, Objects.requireNonNull(executor, "executor must not be null"), false);
     }
@@ -65,15 +90,33 @@ public class PollingPropertySource implements PropertySource, AutoCloseable {
         this.pollTask = this.executor.scheduleWithFixedDelay(this::poll, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * Registers a listener to be notified when property changes are detected during polling.
+     *
+     * @param listener the listener to register (must not be {@code null})
+     * @throws NullPointerException if {@code listener} is {@code null}
+     */
     public void addListener(PropertyChangeListener listener) {
         Objects.requireNonNull(listener, "listener must not be null");
         listeners.add(listener);
     }
 
+    /**
+     * Unregisters a previously registered property change listener.
+     *
+     * @param listener the listener to remove
+     */
     public void removeListener(PropertyChangeListener listener) {
         listeners.remove(listener);
     }
 
+    /**
+     * Immediately polls the delegate {@link PropertySource}, updates the cached snapshot if any
+     * properties have changed, and notifies all registered {@link PropertyChangeListener}s.
+     * <p>
+     * If the delegate throws an exception during polling, a warning is logged and the previous
+     * cached snapshot is retained.
+     */
     public synchronized void poll() {
         Map<String, String> latest;
         try {
@@ -124,11 +167,19 @@ public class PollingPropertySource implements PropertySource, AutoCloseable {
         return changes;
     }
 
+    /**
+     * Returns the most recently cached unmodifiable snapshot of properties.
+     *
+     * @return the cached properties map
+     */
     @Override
     public Map<String, String> getProperties() {
         return cachedProperties;
     }
 
+    /**
+     * Cancels the scheduled polling task and shuts down the internal executor if owned by this instance.
+     */
     @Override
     public void close() {
         pollTask.cancel(false);

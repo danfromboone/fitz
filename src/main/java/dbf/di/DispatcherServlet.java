@@ -23,6 +23,9 @@ import java.util.Map;
 public class DispatcherServlet extends HttpServlet {
     private static final Logger log = LoggerFactory.getLogger(DispatcherServlet.class);
 
+    /**
+     * Unmodifiable list of controllers registered to handle incoming requests.
+     */
     private final List<Controller> controllers;
 
     /**

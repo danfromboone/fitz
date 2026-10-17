@@ -18,10 +18,22 @@ import java.util.Objects;
 public class CompositePropertySource implements PropertySource {
     private final List<PropertySource> propertySources;
 
+    /**
+     * Creates a {@code CompositePropertySource} from an array of property sources,
+     * ordered from lowest precedence (first) to highest precedence (last).
+     *
+     * @param propertySources the property sources in ascending order of precedence; may be {@code null}
+     */
     public CompositePropertySource(PropertySource... propertySources) {
         this(propertySources != null ? Arrays.asList(propertySources) : Collections.emptyList());
     }
 
+    /**
+     * Creates a {@code CompositePropertySource} from a list of property sources,
+     * ordered from lowest precedence (first) to highest precedence (last).
+     *
+     * @param propertySources the property sources in ascending order of precedence; may be {@code null}
+     */
     public CompositePropertySource(List<PropertySource> propertySources) {
         this.propertySources = new ArrayList<>();
         if (propertySources != null) {
@@ -36,16 +48,30 @@ public class CompositePropertySource implements PropertySource {
     /**
      * Pushes a higher-precedence {@link PropertySource} onto the top of the stack,
      * overriding any matching keys from sources below it.
+     *
+     * @param propertySource the property source to add (must not be {@code null})
+     * @throws NullPointerException if {@code propertySource} is {@code null}
      */
     public void addPropertySource(PropertySource propertySource) {
         Objects.requireNonNull(propertySource, "propertySource must not be null");
         this.propertySources.add(propertySource);
     }
 
+    /**
+     * Returns an unmodifiable list of the underlying property sources in ascending order of precedence.
+     *
+     * @return the list of {@link PropertySource} instances
+     */
     public List<PropertySource> getPropertySources() {
         return Collections.unmodifiableList(propertySources);
     }
 
+    /**
+     * Returns an unmodifiable merged map of all properties across all configured sources,
+     * where values from higher-precedence sources override those from lower-precedence sources.
+     *
+     * @return the merged properties map
+     */
     @Override
     public Map<String, String> getProperties() {
         Map<String, String> merged = new LinkedHashMap<>();
@@ -58,6 +84,13 @@ public class CompositePropertySource implements PropertySource {
         return Collections.unmodifiableMap(merged);
     }
 
+    /**
+     * Looks up the property value for the given key starting from the highest-precedence source
+     * down to the lowest-precedence source.
+     *
+     * @param key the property key to look up
+     * @return the resolved property value, or {@code null} if not found in any source
+     */
     @Override
     public String getProperty(String key) {
         for (int i = propertySources.size() - 1; i >= 0; i--) {

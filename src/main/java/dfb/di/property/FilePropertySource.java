@@ -19,20 +19,42 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.function.Supplier;
 
+/**
+ * A {@link PropertySource} that loads key-value properties from a {@code .properties} file
+ * on the filesystem or classpath (UTF-8 encoded).
+ */
 public class FilePropertySource implements PropertySource {
     private static final Logger log = LoggerFactory.getLogger(FilePropertySource.class);
 
     private final Supplier<Map<String, String>> loader;
 
+    /**
+     * Creates a {@code FilePropertySource} that reads from the specified file path or classpath resource.
+     *
+     * @param filePath the filesystem path or classpath resource location (must not be {@code null})
+     * @throws NullPointerException if {@code filePath} is {@code null}
+     */
     public FilePropertySource(String filePath) {
         Objects.requireNonNull(filePath, "filePath must not be null");
         this.loader = () -> loadProperties(filePath);
     }
 
+    /**
+     * Creates a {@code FilePropertySource} that reads from the specified {@link File}.
+     *
+     * @param file the properties file (must not be {@code null})
+     * @throws NullPointerException if {@code file} is {@code null}
+     */
     public FilePropertySource(File file) {
         this(Objects.requireNonNull(file, "file must not be null").toPath());
     }
 
+    /**
+     * Creates a {@code FilePropertySource} that reads from the specified {@link Path}.
+     *
+     * @param path the path to the properties file (must not be {@code null})
+     * @throws NullPointerException if {@code path} is {@code null}
+     */
     public FilePropertySource(Path path) {
         Objects.requireNonNull(path, "path must not be null");
         this.loader = () -> loadFromPath(path);
@@ -78,6 +100,12 @@ public class FilePropertySource implements PropertySource {
         return Collections.unmodifiableMap(map);
     }
 
+    /**
+     * Loads and returns an unmodifiable map of properties from the configured file or resource.
+     *
+     * @return the loaded properties map
+     * @throws UncheckedIOException if the file cannot be found or read
+     */
     @Override
     public Map<String, String> getProperties() {
         return loader.get();

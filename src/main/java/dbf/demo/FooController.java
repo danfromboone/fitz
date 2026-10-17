@@ -10,6 +10,13 @@ public class FooController implements Controller {
     private static final Logger log = LoggerFactory.getLogger(FooController.class);
     private static final Pattern FOO_PATTERN = Pattern.compile("/foo");
 
+
+    private final FooService fooService;
+
+    public FooController(FooService fooService){
+        this.fooService = fooService;
+    }
+
     @Override
     public boolean canHandle(HttpRequest request) {
         return request != null
