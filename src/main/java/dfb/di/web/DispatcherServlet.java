@@ -124,8 +124,13 @@ public class DispatcherServlet extends HttpServlet {
 
         for (Map.Entry<String, List<String>> entry : httpResponse.getHeaders().asMap().entrySet()) {
             String name = entry.getKey();
-            for (String value : entry.getValue()) {
-                servletResponse.addHeader(name, value);
+            List<String> values = entry.getValue();
+            if (values.isEmpty()) {
+                servletResponse.addHeader(name, "");
+            } else {
+                for (String value : values) {
+                    servletResponse.addHeader(name, value);
+                }
             }
         }
 

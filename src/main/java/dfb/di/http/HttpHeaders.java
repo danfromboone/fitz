@@ -26,17 +26,24 @@ public class HttpHeaders {
      * Creates an {@code HttpHeaders} instance initialized with a defensive copy of the given header map.
      *
      * @param initialHeaders initial map of header names to lists of values (must not be {@code null})
-     * @throws NullPointerException     if {@code initialHeaders}, any header name, value list, or value is {@code null}
+     * @throws NullPointerException     if {@code initialHeaders} or any header name is {@code null}
      * @throws IllegalArgumentException if any header name is blank
      */
     public HttpHeaders(Map<String, List<String>> initialHeaders) {
         Objects.requireNonNull(initialHeaders, "initialHeaders must not be null");
         for (Map.Entry<String, List<String>> entry : initialHeaders.entrySet()) {
             String name = validateName(entry.getKey());
-            List<String> sourceValues = Objects.requireNonNull(entry.getValue(), "header value list must not be null");
-            List<String> copiedValues = new ArrayList<>(sourceValues.size());
-            for (String value : sourceValues) {
-                copiedValues.add(validateValue(value));
+            List<String> sourceValues = entry.getValue();
+            List<String> copiedValues = new ArrayList<>();
+            if (sourceValues != null) {
+                for (String value : sourceValues) {
+                    if (value != null) {
+                        String trimmedValue = value.trim();
+                        if (!trimmedValue.isEmpty()) {
+                            copiedValues.add(trimmedValue);
+                        }
+                    }
+                }
             }
             headers.put(name, copiedValues);
         }
@@ -64,7 +71,10 @@ public class HttpHeaders {
                     while (values.hasMoreElements()) {
                         String val = values.nextElement();
                         if (val != null) {
-                            valueList.add(val.trim());
+                            String trimmedVal = val.trim();
+                            if (!trimmedVal.isEmpty()) {
+                                valueList.add(trimmedVal);
+                            }
                         }
                     }
                 }
@@ -91,11 +101,6 @@ public class HttpHeaders {
             throw new IllegalArgumentException("header name must not be blank");
         }
         return trimmed;
-    }
-
-    private static String validateValue(String value) {
-        Objects.requireNonNull(value, "header value must not be null");
-        return value.trim();
     }
 
     /**
@@ -147,33 +152,44 @@ public class HttpHeaders {
     }
 
     /**
-     * Replaces any existing values for the given header name with a single value.
+     * Replaces any existing values for the given header name with a single value (or no value if
+     * {@code value} is {@code null} or blank).
      *
      * @param name  the header name (must not be {@code null} or blank; trimmed)
-     * @param value the header value to set (must not be {@code null}; trimmed)
-     * @throws NullPointerException     if {@code name} or {@code value} is {@code null}
+     * @param value the header value to set; may be {@code null} or empty for a header without a value
+     * @throws NullPointerException     if {@code name} is {@code null}
      * @throws IllegalArgumentException if {@code name} is blank
      */
     public void set(String name, String value) {
         String validName = validateName(name);
-        String validValue = validateValue(value);
         List<String> values = new ArrayList<>(1);
-        values.add(validValue);
+        if (value != null) {
+            String trimmedValue = value.trim();
+            if (!trimmedValue.isEmpty()) {
+                values.add(trimmedValue);
+            }
+        }
         headers.put(validName, values);
     }
 
     /**
-     * Appends a value to the list of values for the given header name.
+     * Appends a value to the list of values for the given header name (or registers the header
+     * with no value if {@code value} is {@code null} or blank).
      *
      * @param name  the header name (must not be {@code null} or blank; trimmed)
-     * @param value the header value to add (must not be {@code null}; trimmed)
-     * @throws NullPointerException     if {@code name} or {@code value} is {@code null}
+     * @param value the header value to add; may be {@code null} or empty for a header without a value
+     * @throws NullPointerException     if {@code name} is {@code null}
      * @throws IllegalArgumentException if {@code name} is blank
      */
     public void add(String name, String value) {
         String validName = validateName(name);
-        String validValue = validateValue(value);
-        headers.computeIfAbsent(validName, k -> new ArrayList<>()).add(validValue);
+        List<String> values = headers.computeIfAbsent(validName, k -> new ArrayList<>());
+        if (value != null) {
+            String trimmedValue = value.trim();
+            if (!trimmedValue.isEmpty()) {
+                values.add(trimmedValue);
+            }
+        }
     }
 
     /**
