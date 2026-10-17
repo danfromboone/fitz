@@ -18,16 +18,6 @@ public interface MutablePropertySource extends PropertySource {
     void registerListener(PropertyChangeListener listener);
 
     /**
-     * Registers a callback that will be run whenever any property changes.
-     *
-     * @param listener the callback to run (must not be {@code null})
-     */
-    default void registerListener(Runnable listener) {
-        Objects.requireNonNull(listener, "listener must not be null");
-        registerListener(event -> listener.run());
-    }
-
-    /**
      * Registers a callback that will be run once per change event if at least one changed
      * property key matches the given regular expression.
      *

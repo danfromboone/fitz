@@ -1,25 +1,34 @@
 package dbf.demo
 
 import dfb.di.property.CompositePropertySource
+import dfb.di.property.DecryptingPropertySource
 import dfb.di.property.FilePropertySource
 import dfb.di.property.PollingPropertySource
+import dfb.di.property.PropertyEncryptor
 import dfb.di.property.PropertySource
 import spock.lang.Specification
+import spock.lang.TempDir
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Duration
 
 class DataContextSpec extends Specification {
 
+    @TempDir
+    Path tempDir
+
     def "initializes MutableDataSource with DatabaseConfig from local.properties overriding default.properties"() {
         given:
+        def localPolling = new PollingPropertySource(new FilePropertySource("local.properties"), Duration.ofMinutes(1))
         def composite = new CompositePropertySource(
                 new FilePropertySource("default.properties"),
-                new FilePropertySource("local.properties")
+                localPolling
         )
-        def pollingSource = new PollingPropertySource(composite, Duration.ofMinutes(1))
+        def decrypting = new DecryptingPropertySource(composite)
 
         when:
-        def dataContext = new DataContext(pollingSource)
+        def dataContext = new DataContext(decrypting)
         MutableDataSource dataSource = dataContext.dataSource as MutableDataSource
 
         then:
@@ -28,41 +37,51 @@ class DataContextSpec extends Specification {
         dataSource.databaseConfig.password == "goopassword"
 
         cleanup:
-        pollingSource.close()
+        decrypting.close()
     }
 
-    def "atomically swaps DatabaseConfig on MutableDataSource when database.* properties change"() {
+    def "atomically swaps DatabaseConfig with decrypted password when independently polled source updates ENC(...) value"() {
         given:
+        Path keyFile = tempDir.resolve("secret.key")
+        Files.writeString(keyFile, PropertyEncryptor.generateKeyString())
+
         def dynamicOverrides = [
-                "database.url"     : "jdbc://goo/bar",
-                "database.username": "goo",
-                "database.password": "goopassword"
+                (DecryptingPropertySource.DEFAULT_KEY_PATH_PROPERTY): keyFile.toString(),
+                "database.url"                                      : "jdbc://goo/bar",
+                "database.username"                                 : "goo",
+                "database.password"                                 : PropertyEncryptor.encrypt("initial_secret", keyFile)
         ]
-        PropertySource mutableMapSource = { -> new LinkedHashMap<>(dynamicOverrides) } as PropertySource
+        def localPollingSource = new PollingPropertySource(
+                { -> new LinkedHashMap<>(dynamicOverrides) } as PropertySource,
+                Duration.ofMinutes(1)
+        )
         def composite = new CompositePropertySource(
                 new FilePropertySource("default.properties"),
-                mutableMapSource
+                localPollingSource
         )
-        def pollingSource = new PollingPropertySource(composite, Duration.ofMinutes(1))
-        def dataContext = new DataContext(pollingSource)
+        def propertySource = new DecryptingPropertySource(composite)
+        def dataContext = new DataContext(propertySource)
         MutableDataSource dataSource = dataContext.dataSource as MutableDataSource
         DatabaseConfig initialConfig = dataSource.databaseConfig
 
-        when: "database properties are updated and polling occurs"
+        expect: "initial encrypted password was decrypted into DatabaseConfig"
+        initialConfig.password == "initial_secret"
+
+        when: "database properties (including encrypted password) are updated and local source is polled"
         dynamicOverrides["database.url"] = "jdbc://prod/bar"
         dynamicOverrides["database.username"] = "prod_user"
-        dynamicOverrides["database.password"] = "prod_secret"
-        pollingSource.poll()
+        dynamicOverrides["database.password"] = PropertyEncryptor.encrypt("rotated_prod_secret", keyFile)
+        localPollingSource.poll()
 
-        then: "the same DataSource instance has a new immutable DatabaseConfig swapped in"
+        then: "the same DataSource instance has a new immutable DatabaseConfig with decrypted values swapped in"
         dataContext.dataSource.is(dataSource)
         !dataSource.databaseConfig.is(initialConfig)
         dataSource.databaseConfig.url == "jdbc://prod/bar"
         dataSource.databaseConfig.userName == "prod_user"
-        dataSource.databaseConfig.password == "prod_secret"
+        dataSource.databaseConfig.password == "rotated_prod_secret"
 
         cleanup:
-        pollingSource.close()
+        propertySource.close()
     }
 
     def "does not trigger database reconfiguration when non-database properties change"() {

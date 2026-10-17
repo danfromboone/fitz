@@ -9,6 +9,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UncheckedIOException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +38,8 @@ public class FilePropertySource implements PropertySource {
      */
     public FilePropertySource(String filePath) {
         Objects.requireNonNull(filePath, "filePath must not be null");
-        this.loader = () -> loadProperties(filePath);
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        this.loader = () -> loadProperties(filePath, classLoader);
     }
 
     /**
@@ -60,19 +63,33 @@ public class FilePropertySource implements PropertySource {
         this.loader = () -> loadFromPath(path);
     }
 
-    private static Map<String, String> loadProperties(String filePath) {
+    private static Map<String, String> loadProperties(String filePath, ClassLoader capturedClassLoader) {
         Path path = Path.of(filePath);
         if (Files.exists(path)) {
             return loadFromPath(path);
         }
 
         String resourceName = filePath.startsWith("/") ? filePath.substring(1) : filePath;
-        InputStream resourceStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceName);
-        if (resourceStream != null) {
-            try (InputStream in = resourceStream;
-                 Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
-                log.debug("Loading properties from classpath resource: {}", resourceName);
-                return parseReader(reader);
+        ClassLoader cl = (capturedClassLoader != null)
+                ? capturedClassLoader
+                : FilePropertySource.class.getClassLoader();
+        URL resourceUrl = (cl != null) ? cl.getResource(resourceName) : null;
+        if (resourceUrl != null) {
+            if ("file".equalsIgnoreCase(resourceUrl.getProtocol())) {
+                try {
+                    return loadFromPath(Path.of(resourceUrl.toURI()));
+                } catch (Exception ignored) {
+                    // Fall back to URLConnection stream
+                }
+            }
+            try {
+                URLConnection connection = resourceUrl.openConnection();
+                connection.setUseCaches(false);
+                try (InputStream in = connection.getInputStream();
+                     Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+                    log.debug("Loading properties from classpath resource: {}", resourceName);
+                    return parseReader(reader);
+                }
             } catch (IOException e) {
                 throw new UncheckedIOException("Failed to read properties from classpath resource: " + filePath, e);
             }

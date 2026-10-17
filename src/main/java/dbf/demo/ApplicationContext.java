@@ -3,6 +3,7 @@ package dbf.demo;
 import dbf.di.Controller;
 import dbf.di.DispatcherServlet;
 import dfb.di.property.CompositePropertySource;
+import dfb.di.property.DecryptingPropertySource;
 import dfb.di.property.FilePropertySource;
 import dfb.di.property.MutablePropertySource;
 import dfb.di.property.PollingPropertySource;
@@ -40,12 +41,15 @@ public class ApplicationContext implements ServletContextListener {
 
     public ApplicationContext() {
         PropertySource defaultProperties = new FilePropertySource("default.properties");
-        PropertySource localProperties = new FilePropertySource("local.properties");
+        PropertySource localProperties = new PollingPropertySource(
+                new FilePropertySource("local.properties"),
+                Duration.ofSeconds(5)
+        );
         CompositePropertySource compositePropertySource = new CompositePropertySource(
                 defaultProperties,
                 localProperties
         );
-        this.propertySource = new PollingPropertySource(compositePropertySource, Duration.ofSeconds(5));
+        this.propertySource = new DecryptingPropertySource(compositePropertySource);
 
         this.dataContext = new DataContext(this.propertySource);
 
