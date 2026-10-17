@@ -40,8 +40,8 @@ public interface MutablePropertySource extends PropertySource {
         Objects.requireNonNull(keyPattern, "keyPattern must not be null");
         Objects.requireNonNull(listener, "listener must not be null");
         registerListener(event -> {
-            boolean matches = event.changes().stream()
-                    .anyMatch(change -> keyPattern.matcher(change.key()).matches());
+            boolean matches = event.getChanges().stream()
+                    .anyMatch(change -> keyPattern.matcher(change.getKey()).matches());
             if (matches) {
                 listener.run();
             }
@@ -71,8 +71,8 @@ public interface MutablePropertySource extends PropertySource {
         Objects.requireNonNull(keyPattern, "keyPattern must not be null");
         Objects.requireNonNull(listener, "listener must not be null");
         registerListener(event -> {
-            List<PropertyChange> matchingChanges = event.changes().stream()
-                    .filter(change -> keyPattern.matcher(change.key()).matches())
+            List<PropertyChange> matchingChanges = event.getChanges().stream()
+                    .filter(change -> keyPattern.matcher(change.getKey()).matches())
                     .toList();
             if (!matchingChanges.isEmpty()) {
                 listener.onPropertyChange(new PropertyChangeEvent(matchingChanges));

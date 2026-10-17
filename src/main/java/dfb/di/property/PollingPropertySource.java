@@ -144,7 +144,7 @@ public class PollingPropertySource implements MutablePropertySource, AutoCloseab
         }
 
         this.cachedProperties = latest;
-        log.debug("Detected {} property change(s): {}", changes.size(), changes);
+        log.debug("Detected {} property change(s)", changes.size());
 
         PropertyChangeEvent event = new PropertyChangeEvent(changes);
         for (PropertyChangeListener listener : listeners) {

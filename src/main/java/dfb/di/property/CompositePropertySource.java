@@ -98,7 +98,7 @@ public class CompositePropertySource implements MutablePropertySource, AutoClose
         }
 
         this.lastSnapshot = latest;
-        log.debug("CompositePropertySource detected {} effective property change(s): {}", changes.size(), changes);
+        log.debug("CompositePropertySource detected {} effective property change(s)", changes.size());
 
         PropertyChangeEvent event = new PropertyChangeEvent(changes);
         for (PropertyChangeListener listener : listeners) {

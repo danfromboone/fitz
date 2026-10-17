@@ -1,13 +1,5 @@
 package dfb.di.property
 
-import dfb.di.property.CompositePropertySource
-import dfb.di.property.DecryptingPropertySource
-import dfb.di.property.FilePropertySource
-import dfb.di.property.PollingPropertySource
-import dfb.di.property.PropertyChange
-import dfb.di.property.PropertyChangeEvent
-import dfb.di.property.PropertyEncryptor
-import dfb.di.property.PropertySource
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -78,8 +70,8 @@ database.password=${encryptedPassword}
 
         then: "listeners receive the decrypted old and new values"
         events.size() == 1
-        events[0].changes() == [
-                new PropertyChange("database.password", "initial-local-pass", "rotated-local-pass")
+        events[0].changes.collect { [it.key, it.oldValue, it.newValue] } == [
+                ["database.password", "initial-local-pass", "rotated-local-pass"]
         ]
         decrypting.getProperty("database.password") == "rotated-local-pass"
 

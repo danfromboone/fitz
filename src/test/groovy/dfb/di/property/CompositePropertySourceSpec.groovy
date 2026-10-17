@@ -1,10 +1,5 @@
 package dfb.di.property
 
-import dfb.di.property.CompositePropertySource
-import dfb.di.property.PollingPropertySource
-import dfb.di.property.PropertyChange
-import dfb.di.property.PropertyChangeEvent
-import dfb.di.property.PropertySource
 import spock.lang.Specification
 
 import java.time.Duration
@@ -49,7 +44,9 @@ class CompositePropertySourceSpec extends Specification {
 
         then: "a change event is emitted for the non-overridden property"
         receivedEvents.size() == 1
-        receivedEvents[0].changes() == [new PropertyChange("app.timeout", "30", "60")]
+        receivedEvents[0].changes.collect { [it.key, it.oldValue, it.newValue] } == [
+                ["app.timeout", "30", "60"]
+        ]
         composite.getProperty("app.timeout") == "60"
 
         when: "the high-priority source removes its override"
@@ -58,8 +55,8 @@ class CompositePropertySourceSpec extends Specification {
 
         then: "the composite source falls back to the low-priority source value and emits a change event"
         receivedEvents.size() == 2
-        receivedEvents[1].changes() == [
-                new PropertyChange("database.url", "jdbc://local/db", "jdbc://changed-default/db")
+        receivedEvents[1].changes.collect { [it.key, it.oldValue, it.newValue] } == [
+                ["database.url", "jdbc://local/db", "jdbc://changed-default/db"]
         ]
         composite.getProperty("database.url") == "jdbc://changed-default/db"
 

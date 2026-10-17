@@ -1,11 +1,5 @@
 package dfb.di.property
 
-import dfb.di.property.FilePropertySource
-import dfb.di.property.PollingPropertySource
-import dfb.di.property.PropertyChange
-import dfb.di.property.PropertyChangeEvent
-import dfb.di.property.PropertyChangeListener
-import dfb.di.property.PropertySource
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.util.concurrent.PollingConditions
@@ -39,10 +33,10 @@ class PollingPropertySourceSpec extends Specification {
         pollingSource.getProperty("d") == "4"
 
         receivedEvents.size() == 1
-        receivedEvents[0].changes() == [
-                new PropertyChange("b", "2", "2-updated"),
-                new PropertyChange("c", "3", null),
-                new PropertyChange("d", null, "4")
+        receivedEvents[0].changes.collect { [it.key, it.oldValue, it.newValue] } == [
+                ["b", "2", "2-updated"],
+                ["c", "3", null],
+                ["d", null, "4"]
         ]
 
         cleanup:
@@ -89,9 +83,9 @@ class PollingPropertySourceSpec extends Specification {
         then: "the background poller detects the changes and emits an event"
         new PollingConditions(timeout: 2).eventually {
             assert events.size() == 1
-            assert events[0].changes().toSet() == [
-                    new PropertyChange("port", "8080", "9090"),
-                    new PropertyChange("timeout", null, "30")
+            assert events[0].changes.collect { [it.key, it.oldValue, it.newValue] }.toSet() == [
+                    ["port", "8080", "9090"],
+                    ["timeout", null, "30"]
             ].toSet()
             assert pollingSource.getProperty("port") == "9090"
             assert pollingSource.getProperty("timeout") == "30"
