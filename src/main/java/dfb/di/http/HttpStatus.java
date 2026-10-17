@@ -1,5 +1,7 @@
 package dfb.di.http;
 
+import dfb.di.Validate;
+
 /**
  * Represents an HTTP response status code and optional reason phrase, along with
  * constants for common standard HTTP statuses.
@@ -88,12 +90,6 @@ public final class HttpStatus {
         return status;
     }
 
-    private static void validateCode(int code) {
-        if (code < MIN_CODE || code > MAX_CODE) {
-            throw new IllegalArgumentException("HTTP status code must be between " + MIN_CODE + " and " + MAX_CODE + ": " + code);
-        }
-    }
-
     /**
      * Returns the predefined {@code HttpStatus} instance for the given numeric status code if one
      * exists, or creates a new {@code HttpStatus} with an empty reason phrase for non-standard codes.
@@ -103,7 +99,7 @@ public final class HttpStatus {
      * @throws IllegalArgumentException if {@code code} is outside the valid range {@code 100..599}
      */
     public static HttpStatus of(int code) {
-        validateCode(code);
+        Validate.inRange(code, MIN_CODE, MAX_CODE, "HTTP status code");
         HttpStatus predefined = PREDEFINED[code];
         if (predefined != null) {
             return predefined;
@@ -122,8 +118,8 @@ public final class HttpStatus {
      * @throws IllegalArgumentException if {@code code} is outside the valid range {@code 100..599}
      */
     public static HttpStatus of(int code, String reasonPhrase) {
-        validateCode(code);
-        String trimmedReason = (reasonPhrase != null) ? reasonPhrase.trim() : "";
+        Validate.inRange(code, MIN_CODE, MAX_CODE, "HTTP status code");
+        String trimmedReason = Validate.trimToEmpty(reasonPhrase);
         HttpStatus predefined = PREDEFINED[code];
         if (predefined != null
                 && (trimmedReason.isEmpty() || predefined.reasonPhrase.equals(trimmedReason))) {

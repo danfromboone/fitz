@@ -1,12 +1,12 @@
 package dfb.di.http;
 
+import dfb.di.Validate;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -30,18 +30,16 @@ public class HttpHeaders {
      * @throws IllegalArgumentException if any header name is blank
      */
     public HttpHeaders(Map<String, List<String>> initialHeaders) {
-        Objects.requireNonNull(initialHeaders, "initialHeaders must not be null");
+        Validate.nonNull(initialHeaders, "initialHeaders");
         for (Map.Entry<String, List<String>> entry : initialHeaders.entrySet()) {
-            String name = validateName(entry.getKey());
+            String name = Validate.trimmedNonBlank(entry.getKey(), "header name");
             List<String> sourceValues = entry.getValue();
             List<String> copiedValues = new ArrayList<>();
             if (sourceValues != null) {
                 for (String value : sourceValues) {
-                    if (value != null) {
-                        String trimmedValue = value.trim();
-                        if (!trimmedValue.isEmpty()) {
-                            copiedValues.add(trimmedValue);
-                        }
+                    String trimmedValue = Validate.trimToEmpty(value);
+                    if (!trimmedValue.isEmpty()) {
+                        copiedValues.add(trimmedValue);
                     }
                 }
             }
@@ -56,25 +54,22 @@ public class HttpHeaders {
      * @throws NullPointerException if {@code request} is {@code null}
      */
     public HttpHeaders(HttpServletRequest request) {
-        Objects.requireNonNull(request, "request must not be null");
+        Validate.nonNull(request, "request");
         Enumeration<String> headerNames = request.getHeaderNames();
         if (headerNames != null) {
             while (headerNames.hasMoreElements()) {
                 String rawName = headerNames.nextElement();
-                if (rawName == null || rawName.isBlank()) {
+                String name = Validate.trimToEmpty(rawName);
+                if (name.isEmpty()) {
                     continue;
                 }
-                String name = rawName.trim();
                 Enumeration<String> values = request.getHeaders(rawName);
                 List<String> valueList = new ArrayList<>();
                 if (values != null) {
                     while (values.hasMoreElements()) {
-                        String val = values.nextElement();
-                        if (val != null) {
-                            String trimmedVal = val.trim();
-                            if (!trimmedVal.isEmpty()) {
-                                valueList.add(trimmedVal);
-                            }
+                        String trimmedVal = Validate.trimToEmpty(values.nextElement());
+                        if (!trimmedVal.isEmpty()) {
+                            valueList.add(trimmedVal);
                         }
                     }
                 }
@@ -92,15 +87,6 @@ public class HttpHeaders {
      */
     public static HttpHeaders from(HttpServletRequest request) {
         return new HttpHeaders(request);
-    }
-
-    private static String validateName(String name) {
-        Objects.requireNonNull(name, "header name must not be null");
-        String trimmed = name.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException("header name must not be blank");
-        }
-        return trimmed;
     }
 
     /**
@@ -134,7 +120,7 @@ public class HttpHeaders {
      * @throws IllegalArgumentException if {@code name} is blank
      */
     public List<String> getValues(String name) {
-        List<String> values = headers.get(validateName(name));
+        List<String> values = headers.get(Validate.trimmedNonBlank(name, "header name"));
         return (values != null) ? Collections.unmodifiableList(values) : Collections.emptyList();
     }
 
@@ -147,7 +133,7 @@ public class HttpHeaders {
      * @throws IllegalArgumentException if {@code name} is blank
      */
     public String getFirst(String name) {
-        List<String> values = headers.get(validateName(name));
+        List<String> values = headers.get(Validate.trimmedNonBlank(name, "header name"));
         return (values == null || values.isEmpty()) ? null : values.getFirst();
     }
 
@@ -161,13 +147,11 @@ public class HttpHeaders {
      * @throws IllegalArgumentException if {@code name} is blank
      */
     public void set(String name, String value) {
-        String validName = validateName(name);
+        String validName = Validate.trimmedNonBlank(name, "header name");
         List<String> values = new ArrayList<>(1);
-        if (value != null) {
-            String trimmedValue = value.trim();
-            if (!trimmedValue.isEmpty()) {
-                values.add(trimmedValue);
-            }
+        String trimmedValue = Validate.trimToEmpty(value);
+        if (!trimmedValue.isEmpty()) {
+            values.add(trimmedValue);
         }
         headers.put(validName, values);
     }
@@ -182,13 +166,11 @@ public class HttpHeaders {
      * @throws IllegalArgumentException if {@code name} is blank
      */
     public void add(String name, String value) {
-        String validName = validateName(name);
+        String validName = Validate.trimmedNonBlank(name, "header name");
         List<String> values = headers.computeIfAbsent(validName, k -> new ArrayList<>());
-        if (value != null) {
-            String trimmedValue = value.trim();
-            if (!trimmedValue.isEmpty()) {
-                values.add(trimmedValue);
-            }
+        String trimmedValue = Validate.trimToEmpty(value);
+        if (!trimmedValue.isEmpty()) {
+            values.add(trimmedValue);
         }
     }
 
@@ -201,7 +183,7 @@ public class HttpHeaders {
      * @throws IllegalArgumentException if {@code name} is blank
      */
     public boolean contains(String name) {
-        return headers.containsKey(validateName(name));
+        return headers.containsKey(Validate.trimmedNonBlank(name, "header name"));
     }
 
     /**

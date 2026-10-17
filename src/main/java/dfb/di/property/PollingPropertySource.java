@@ -1,5 +1,6 @@
 package dfb.di.property;
 
+import dfb.di.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,7 +69,7 @@ public class PollingPropertySource implements MutablePropertySource, AutoCloseab
      * @throws IllegalArgumentException if {@code pollInterval} is zero or negative
      */
     public PollingPropertySource(PropertySource delegate, Duration pollInterval, ScheduledExecutorService executor) {
-        this(delegate, pollInterval, Objects.requireNonNull(executor, "executor must not be null"), false);
+        this(delegate, pollInterval, Validate.nonNull(executor, "executor"), false);
     }
 
     private PollingPropertySource(
@@ -77,11 +78,8 @@ public class PollingPropertySource implements MutablePropertySource, AutoCloseab
             ScheduledExecutorService executor,
             boolean ownsExecutor
     ) {
-        this.delegate = Objects.requireNonNull(delegate, "delegate must not be null");
-        Objects.requireNonNull(pollInterval, "pollInterval must not be null");
-        if (pollInterval.isZero() || pollInterval.isNegative()) {
-            throw new IllegalArgumentException("pollInterval must be positive");
-        }
+        this.delegate = Validate.nonNull(delegate, "delegate");
+        Validate.positive(pollInterval, "pollInterval");
         this.executor = executor;
         this.ownsExecutor = ownsExecutor;
         this.cachedProperties = snapshot(delegate.getProperties());

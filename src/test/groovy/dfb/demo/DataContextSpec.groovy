@@ -120,4 +120,30 @@ class DataContextSpec extends Specification {
         cleanup:
         pollingSource.close()
     }
+
+    def "DatabaseConfig trims arguments and rejects null or blank values"() {
+        when:
+        def config = new DatabaseConfig("  jdbc://goo/bar  ", "  goo  ", "  goopassword  ")
+
+        then:
+        config.url == "jdbc://goo/bar"
+        config.userName == "goo"
+        config.password == "goopassword"
+
+        when:
+        new DatabaseConfig(url, userName, password)
+
+        then:
+        thrown(expectedException)
+
+        where:
+        url              | userName | password | expectedException
+        null             | "user"   | "pass"   | NullPointerException
+        "jdbc://goo/bar" | null     | "pass"   | NullPointerException
+        "jdbc://goo/bar" | "user"   | null     | NullPointerException
+        ""               | "user"   | "pass"   | IllegalArgumentException
+        "   "            | "user"   | "pass"   | IllegalArgumentException
+        "jdbc://goo/bar" | "   "    | "pass"   | IllegalArgumentException
+        "jdbc://goo/bar" | "user"   | "   "    | IllegalArgumentException
+    }
 }

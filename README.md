@@ -20,6 +20,7 @@ Instead of relying on runtime reflection, classpath scanning, annotation process
 ### 1. DI Core (`dfb.di`)
 - **`LazyValue<T>`**: Thread-safe double-checked locking `Supplier<T>` wrapper for on-demand initialization when needed.
 - **`Closeables`**: Shutdown utility (`closeQuietly`, `closeAllQuietly`) for safely closing `Closeable`, `AutoCloseable`, initialized `LazyValue` instances, or arbitrary component references while catching and logging exceptions.
+- **`Validate`**: Argument validation and normalization utility (`nonNull`, `trimmedNonBlank`, `trimToEmpty`, `inRange`, `positive`).
 
 ### 2. Web Dispatch (`dfb.di.web`)
 - **`DispatcherServlet`**: Front-controller `HttpServlet` registered programmatically by the application context; dispatches incoming requests to the first matching `Controller`.

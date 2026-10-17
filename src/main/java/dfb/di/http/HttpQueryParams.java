@@ -1,12 +1,12 @@
 package dfb.di.http;
 
+import dfb.di.Validate;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -23,7 +23,7 @@ public class HttpQueryParams {
      * @throws NullPointerException if {@code decodedQuery} is {@code null}
      */
     public HttpQueryParams(String decodedQuery) {
-        Objects.requireNonNull(decodedQuery, "decodedQuery must not be null");
+        Validate.nonNull(decodedQuery, "decodedQuery");
         this.params = parseQueryParams(decodedQuery.trim());
     }
 
@@ -34,9 +34,8 @@ public class HttpQueryParams {
      * @throws NullPointerException if {@code uri} is {@code null}
      */
     public HttpQueryParams(URI uri) {
-        Objects.requireNonNull(uri, "uri must not be null");
-        String query = uri.getQuery();
-        this.params = parseQueryParams(query != null ? query.trim() : "");
+        Validate.nonNull(uri, "uri");
+        this.params = parseQueryParams(Validate.trimToEmpty(uri.getQuery()));
     }
 
     private static Map<String, List<String>> parseQueryParams(String query) {
@@ -51,10 +50,8 @@ public class HttpQueryParams {
                 continue;
             }
             int idx = trimmedPair.indexOf('=');
-            String key = ((idx >= 0) ? trimmedPair.substring(0, idx) : trimmedPair).trim();
-            if (key.isEmpty()) {
-                throw new IllegalArgumentException("Query parameter key must not be blank in: " + pair);
-            }
+            String rawKey = (idx >= 0) ? trimmedPair.substring(0, idx) : trimmedPair;
+            String key = Validate.trimmedNonBlank(rawKey, "query parameter key");
             List<String> values = parsed.computeIfAbsent(key, k -> new ArrayList<>());
             if (idx >= 0 && idx + 1 < trimmedPair.length()) {
                 String value = trimmedPair.substring(idx + 1).trim();
@@ -65,15 +62,6 @@ public class HttpQueryParams {
         }
         parsed.replaceAll((k, v) -> Collections.unmodifiableList(v));
         return Collections.unmodifiableMap(parsed);
-    }
-
-    private static String validateKey(String key) {
-        Objects.requireNonNull(key, "key must not be null");
-        String trimmed = key.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException("key must not be blank");
-        }
-        return trimmed;
     }
 
     /**
@@ -103,7 +91,7 @@ public class HttpQueryParams {
      * @throws IllegalArgumentException if {@code key} is blank
      */
     public List<String> getValues(String key) {
-        return params.getOrDefault(validateKey(key), Collections.emptyList());
+        return params.getOrDefault(Validate.trimmedNonBlank(key, "key"), Collections.emptyList());
     }
 
     /**
@@ -115,7 +103,7 @@ public class HttpQueryParams {
      * @throws IllegalArgumentException if {@code key} is blank
      */
     public String getFirst(String key) {
-        List<String> values = params.get(validateKey(key));
+        List<String> values = params.get(Validate.trimmedNonBlank(key, "key"));
         return (values == null || values.isEmpty()) ? null : values.getFirst();
     }
 
@@ -128,7 +116,7 @@ public class HttpQueryParams {
      * @throws IllegalArgumentException if {@code key} is blank
      */
     public boolean containsKey(String key) {
-        return params.containsKey(validateKey(key));
+        return params.containsKey(Validate.trimmedNonBlank(key, "key"));
     }
 
     /**

@@ -1,11 +1,11 @@
 package dfb.di.http;
 
+import dfb.di.Validate;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -28,12 +28,7 @@ public class HttpUri {
      * @throws IllegalArgumentException if {@code uri} is blank or violates RFC 2396 URI syntax
      */
     public HttpUri(String uri) {
-        Objects.requireNonNull(uri, "uri must not be null");
-        String trimmed = uri.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException("uri must not be blank");
-        }
-        this.uri = URI.create(trimmed);
+        this.uri = URI.create(Validate.trimmedNonBlank(uri, "uri"));
         this.queryParams = new HttpQueryParams(this.uri);
     }
 
@@ -50,15 +45,8 @@ public class HttpUri {
     }
 
     private static String combineUriAndQuery(String uri, String query) {
-        Objects.requireNonNull(uri, "uri must not be null");
-        String base = uri.trim();
-        if (base.isEmpty()) {
-            throw new IllegalArgumentException("uri must not be blank");
-        }
-        if (query == null) {
-            return base;
-        }
-        String trimmedQuery = query.trim();
+        String base = Validate.trimmedNonBlank(uri, "uri");
+        String trimmedQuery = Validate.trimToEmpty(query);
         if (trimmedQuery.isEmpty()) {
             return base;
         }
@@ -81,18 +69,14 @@ public class HttpUri {
      * @throws IllegalArgumentException if the request URI is blank or invalid
      */
     public static HttpUri from(HttpServletRequest request) {
-        Objects.requireNonNull(request, "request must not be null");
+        Validate.nonNull(request, "request");
         StringBuffer requestUrl = request.getRequestURL();
         String base = (requestUrl != null) ? requestUrl.toString() : request.getRequestURI();
         return new HttpUri(base, request.getQueryString());
     }
 
     private static Pattern compileRegex(String regex) {
-        Objects.requireNonNull(regex, "regex must not be null");
-        String trimmed = regex.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException("regex must not be blank");
-        }
+        String trimmed = Validate.trimmedNonBlank(regex, "regex");
         return PATTERN_CACHE.computeIfAbsent(trimmed, Pattern::compile);
     }
 
@@ -158,7 +142,7 @@ public class HttpUri {
      * @throws NullPointerException if {@code pattern} is {@code null}
      */
     public boolean matches(Pattern pattern) {
-        Objects.requireNonNull(pattern, "pattern must not be null");
+        Validate.nonNull(pattern, "pattern");
         String path = getPath();
         return (path != null && pattern.matcher(path).matches())
                 || pattern.matcher(uri.toString()).matches();
@@ -185,7 +169,7 @@ public class HttpUri {
      * @throws NullPointerException if {@code pattern} is {@code null}
      */
     public Map<String, String> extractPathParams(Pattern pattern) {
-        Objects.requireNonNull(pattern, "pattern must not be null");
+        Validate.nonNull(pattern, "pattern");
         String path = getPath();
         Matcher matcher = (path != null) ? pattern.matcher(path) : null;
         if (matcher == null || !matcher.matches()) {

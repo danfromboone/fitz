@@ -1,8 +1,8 @@
 package dfb.di.http;
 
+import dfb.di.Validate;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;
-import java.util.Objects;
 
 /**
  * Enumeration of standard HTTP request methods.
@@ -36,12 +36,7 @@ public enum HttpMethod {
      * @throws IllegalArgumentException if the method name is blank or does not match a known {@code HttpMethod}
      */
     public static HttpMethod from(String method) {
-        Objects.requireNonNull(method, "method must not be null");
-        String trimmed = method.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException("method must not be blank");
-        }
-        return HttpMethod.valueOf(trimmed.toUpperCase(Locale.ROOT));
+        return HttpMethod.valueOf(Validate.trimmedNonBlank(method, "method").toUpperCase(Locale.ROOT));
     }
 
     /**
@@ -53,7 +48,7 @@ public enum HttpMethod {
      * @throws IllegalArgumentException if the servlet request method is blank or does not match a known {@code HttpMethod}
      */
     public static HttpMethod from(HttpServletRequest request) {
-        Objects.requireNonNull(request, "request must not be null");
+        Validate.nonNull(request, "request");
         return from(request.getMethod());
     }
 }
