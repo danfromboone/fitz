@@ -12,31 +12,66 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Front-controller servlet that dispatches incoming HTTP requests to the first matching
+ * {@link Controller} in its configured controller list.
+ * <p>
+ * If no controller matches a request, a {@code 404 Not Found} status is returned.
+ * If an unhandled exception occurs during dispatch or handling, a {@code 500 Internal Server Error}
+ * plain-text response is written.
+ */
 public class DispatcherServlet extends HttpServlet {
     private static final Logger log = LoggerFactory.getLogger(DispatcherServlet.class);
 
     private final List<Controller> controllers;
 
+    /**
+     * Creates a new {@code DispatcherServlet} with the given collection of controllers.
+     *
+     * @param controllers the controllers to evaluate in iteration order; if {@code null}, an empty list is used
+     */
     public DispatcherServlet(Collection<Controller> controllers) {
         this.controllers = (controllers != null)
                 ? List.copyOf(controllers)
                 : Collections.emptyList();
     }
 
+    /**
+     * Logs servlet initialization along with the number of registered controllers.
+     */
     @Override
     public void init() {
         log.info("Initialized DispatcherServlet with {} controller(s)", this.controllers.size());
     }
 
+    /**
+     * Returns an unmodifiable list of controllers registered with this servlet.
+     *
+     * @return the registered {@link Controller} instances
+     */
     public List<Controller> getControllers() {
         return controllers;
     }
 
+    /**
+     * Dispatches any incoming HTTP request regardless of HTTP method to the matching controller.
+     *
+     * @param request  the incoming servlet request
+     * @param response the outgoing servlet response
+     * @throws IOException if an I/O error occurs while writing the response
+     */
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws IOException {
         dispatch(request, response);
     }
 
+    /**
+     * Handles HTTP {@code GET} requests by dispatching them to the matching controller.
+     *
+     * @param request  the incoming servlet request
+     * @param response the outgoing servlet response
+     * @throws IOException if an I/O error occurs while writing the response
+     */
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         dispatch(request, response);
