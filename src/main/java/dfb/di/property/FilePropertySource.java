@@ -1,0 +1,85 @@
+package dfb.di.property;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.function.Supplier;
+
+public class FilePropertySource implements PropertySource {
+    private static final Logger log = LoggerFactory.getLogger(FilePropertySource.class);
+
+    private final Supplier<Map<String, String>> loader;
+
+    public FilePropertySource(String filePath) {
+        Objects.requireNonNull(filePath, "filePath must not be null");
+        this.loader = () -> loadProperties(filePath);
+    }
+
+    public FilePropertySource(File file) {
+        this(Objects.requireNonNull(file, "file must not be null").toPath());
+    }
+
+    public FilePropertySource(Path path) {
+        Objects.requireNonNull(path, "path must not be null");
+        this.loader = () -> loadFromPath(path);
+    }
+
+    private static Map<String, String> loadProperties(String filePath) {
+        Path path = Path.of(filePath);
+        if (Files.exists(path)) {
+            return loadFromPath(path);
+        }
+
+        String resourceName = filePath.startsWith("/") ? filePath.substring(1) : filePath;
+        InputStream resourceStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceName);
+        if (resourceStream != null) {
+            try (InputStream in = resourceStream;
+                 Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+                log.debug("Loading properties from classpath resource: {}", resourceName);
+                return parseReader(reader);
+            } catch (IOException e) {
+                throw new UncheckedIOException("Failed to read properties from classpath resource: " + filePath, e);
+            }
+        }
+
+        throw new UncheckedIOException(new IOException("Properties file not found: " + filePath));
+    }
+
+    private static Map<String, String> loadFromPath(Path path) {
+        try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+            log.debug("Loading properties from file path: {}", path);
+            return parseReader(reader);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to read properties from file: " + path, e);
+        }
+    }
+
+    private static Map<String, String> parseReader(Reader reader) throws IOException {
+        Properties props = new Properties();
+        props.load(reader);
+        Map<String, String> map = new LinkedHashMap<>(props.size());
+        for (String name : props.stringPropertyNames()) {
+            map.put(name, props.getProperty(name));
+        }
+        return Collections.unmodifiableMap(map);
+    }
+
+    @Override
+    public Map<String, String> getProperties() {
+        return loader.get();
+    }
+}

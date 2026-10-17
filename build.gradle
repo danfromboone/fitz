@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+    id 'groovy'
+    id 'war'
+}
+
+group 'dbf'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    spockVersion = '2.5-groovy-6.0'
+}
+
+java {
+    sourceCompatibility = '27'
+    targetCompatibility = '27'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    implementation('org.slf4j:slf4j-api:2.0.20')
+    runtimeOnly('ch.qos.logback:logback-classic:1.6.5')
+
+    compileOnly('jakarta.servlet:jakarta.servlet-api:6.1.0')
+    testImplementation('jakarta.servlet:jakarta.servlet-api:6.1.0')
+
+    testImplementation("org.spockframework:spock-core:${spockVersion}")
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher')
+}
+
+test {
+    useJUnitPlatform()
+}

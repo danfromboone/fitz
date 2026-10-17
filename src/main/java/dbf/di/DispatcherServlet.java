@@ -1,0 +1,102 @@
+package dbf.di;
+
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+public class DispatcherServlet extends HttpServlet {
+    private static final Logger log = LoggerFactory.getLogger(DispatcherServlet.class);
+
+    private final List<Controller> controllers;
+
+    public DispatcherServlet(Collection<Controller> controllers) {
+        this.controllers = (controllers != null)
+                ? List.copyOf(controllers)
+                : Collections.emptyList();
+    }
+
+    @Override
+    public void init() {
+        log.info("Initialized DispatcherServlet with {} controller(s)", this.controllers.size());
+    }
+
+    public List<Controller> getControllers() {
+        return controllers;
+    }
+
+    @Override
+    protected void service(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        dispatch(request, response);
+    }
+
+    @Override
+    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        dispatch(request, response);
+    }
+
+    private void dispatch(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            HttpRequest httpRequest = new HttpRequest(request);
+            log.debug("Incoming request: {} {}", httpRequest.getMethod(), httpRequest.getHttpUri());
+
+            for (Controller controller : controllers) {
+                if (controller != null && controller.canHandle(httpRequest)) {
+                    log.debug("Dispatching {} {} to {}",
+                            httpRequest.getMethod(),
+                            httpRequest.getHttpUri().getPath(),
+                            controller.getClass().getSimpleName());
+                    HttpResponse httpResponse = controller.handle(httpRequest);
+                    writeResponse(httpResponse, response);
+                    return;
+                }
+            }
+
+            log.warn("No controller found for {} {}", httpRequest.getMethod(), httpRequest.getHttpUri());
+            response.setStatus(HttpStatus.NOT_FOUND.getCode());
+        } catch (Exception e) {
+            log.error("Unhandled exception while processing request", e);
+            HttpHeaders errorHeaders = new HttpHeaders();
+            errorHeaders.set("Content-Type", "text/plain; charset=UTF-8");
+            String errorMessage = (e.getMessage() != null) ? e.getMessage() : "Internal Server Error";
+            HttpResponse errorResponse = new HttpResponse(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    HttpResponseBody.of(errorMessage),
+                    errorHeaders
+            );
+            writeResponse(errorResponse, response);
+        }
+    }
+
+    private void writeResponse(HttpResponse httpResponse, HttpServletResponse servletResponse) throws IOException {
+        if (httpResponse == null) {
+            servletResponse.setStatus(HttpStatus.NO_CONTENT.getCode());
+            return;
+        }
+
+        HttpStatus status = httpResponse.getStatusCode();
+        servletResponse.setStatus((status != null) ? status.getCode() : HttpStatus.OK.getCode());
+
+        HttpHeaders headers = httpResponse.getHeaders();
+        if (headers != null) {
+            for (Map.Entry<String, List<String>> entry : headers.asMap().entrySet()) {
+                String name = entry.getKey();
+                for (String value : entry.getValue()) {
+                    servletResponse.addHeader(name, value);
+                }
+            }
+        }
+
+        HttpResponseBody body = httpResponse.getBody();
+        if (body != null && !body.isEmpty()) {
+            body.writeTo(servletResponse.getOutputStream());
+        }
+    }
+}
