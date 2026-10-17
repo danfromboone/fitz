@@ -69,18 +69,6 @@ public class DispatcherServlet extends HttpServlet {
         dispatch(request, response);
     }
 
-    /**
-     * Handles HTTP {@code GET} requests by dispatching them to the matching controller.
-     *
-     * @param request  the incoming servlet request
-     * @param response the outgoing servlet response
-     * @throws IOException if an I/O error occurs while writing the response
-     */
-    @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        dispatch(request, response);
-    }
-
     private void dispatch(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
             HttpRequest httpRequest = new HttpRequest(request);

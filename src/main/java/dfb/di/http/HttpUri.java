@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -14,6 +15,8 @@ import java.util.regex.Pattern;
  * regex matching, and named path parameter extraction.
  */
 public class HttpUri {
+    private static final Map<String, Pattern> PATTERN_CACHE = new ConcurrentHashMap<>();
+
     private final URI uri;
     private final HttpQueryParams queryParams;
 
@@ -90,7 +93,7 @@ public class HttpUri {
         if (trimmed.isEmpty()) {
             throw new IllegalArgumentException("regex must not be blank");
         }
-        return Pattern.compile(trimmed);
+        return PATTERN_CACHE.computeIfAbsent(trimmed, Pattern::compile);
     }
 
     /**

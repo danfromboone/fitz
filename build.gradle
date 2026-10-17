@@ -4,7 +4,7 @@ plugins {
     id 'war'
 }
 
-group 'dbf'
+group 'dfb'
 version '1.0-SNAPSHOT'
 
 repositories {
