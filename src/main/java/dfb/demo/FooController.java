@@ -21,7 +21,6 @@ public class FooController implements Controller {
     @Override
     public boolean canHandle(HttpRequest request) {
         return request != null
-                && request.getHttpUri() != null
                 && request.getHttpUri().matches(FOO_PATTERN)
                 && HttpMethod.GET.equals(request.getMethod());
     }
