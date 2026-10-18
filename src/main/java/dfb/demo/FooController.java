@@ -32,7 +32,7 @@ public class FooController implements Controller {
         String message = "Request params: " + queryParams.asMap();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Content-Type", "text/plain; charset=UTF-8");
+        headers.setContentType(MimeType.TEXT_PLAIN_UTF8);
 
         return new HttpResponse(HttpStatus.OK, HttpResponseBody.of(message), headers);
     }

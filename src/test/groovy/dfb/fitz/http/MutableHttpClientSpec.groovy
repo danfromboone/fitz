@@ -6,7 +6,7 @@ import spock.lang.Specification
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 
-class ApacheHttpClientSpec extends Specification {
+class MutableHttpClientSpec extends Specification {
 
     HttpServer server
     String baseUrl
@@ -97,9 +97,9 @@ class ApacheHttpClientSpec extends Specification {
         thrown(NullPointerException)
     }
 
-    def "ApacheHttpClient executes GET, POST, PUT, and DELETE requests with headers and bodies"() {
+    def "MutableHttpClient executes GET, POST, PUT, and DELETE requests with headers and bodies"() {
         given:
-        def client = new ApacheHttpClient()
+        def client = new MutableHttpClient()
 
         when: "GET with query params and headers"
         def headers = new HttpHeaders()
@@ -141,12 +141,12 @@ class ApacheHttpClientSpec extends Specification {
         client.close()
     }
 
-    def "ApacheHttpClient supports live reconfiguration of timeouts and pool settings via setConfig"() {
+    def "MutableHttpClient supports live reconfiguration of timeouts and pool settings via setConfig"() {
         given: "client initially configured with a tight 50ms response timeout"
         def tightConfig = HttpClientConfig.builder()
                 .responseTimeout(Duration.ofMillis(50))
                 .build()
-        def client = new ApacheHttpClient(tightConfig)
+        def client = new MutableHttpClient(tightConfig)
         def slowUri = new HttpUri("${baseUrl}/slow")
 
         when: "calling a slow endpoint (300ms) with a 50ms response timeout"
@@ -173,12 +173,12 @@ class ApacheHttpClientSpec extends Specification {
         client.close()
     }
 
-    def "ApacheHttpClient resolves relative request URIs against HttpClientConfig baseUri"() {
+    def "MutableHttpClient resolves relative request URIs against HttpClientConfig baseUri"() {
         given:
         def config = HttpClientConfig.builder()
                 .baseUri(new HttpUri(baseUrl))
                 .build()
-        def client = new ApacheHttpClient(config)
+        def client = new MutableHttpClient(config)
 
         when: "executing a relative path with leading slash"
         HttpResponse response1 = client.get(new HttpUri("/echo?foo=1"))

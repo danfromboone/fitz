@@ -33,8 +33,8 @@ Provides clean HTTP value objects over Jakarta Servlet APIs and outbound HTTP cl
 
 - **`HttpRequest` / `HttpRequestBody`**: High-level request wrapper with URI, method, headers, query parameters, and lazy body reading.
 - **`HttpResponse` / `HttpResponseBody` / `HttpStatus`**: Value objects representing HTTP responses, status codes, headers, and payloads.
-- **`HttpUri` / `HttpQueryParams` / `HttpHeaders` / `HttpMethod`**: Rich utilities for URI regex matching, named path-parameter extraction (`(?<id>[^/]+)`), decoded multi-value query parameters, and case-insensitive headers.
-- **`HttpClient` / `ApacheHttpClient` / `HttpClientConfig`**: Outbound HTTP client abstraction operating on `HttpRequest` and `HttpResponse`, backed by Apache HttpClient 5's `PoolingHttpClientConnectionManager` with `baseUri` resolution and live runtime reconfiguration of connection timeouts, response timeouts, pool sizes, and TTLs.
+- **`HttpUri` / `HttpQueryParams` / `HttpHeaders` / `HttpMethod` / `MimeType`**: Rich utilities for URI regex matching, named path-parameter extraction (`(?<id>[^/]+)`), decoded multi-value query parameters, case-insensitive headers, and MIME media types.
+- **`HttpClient` / `MutableHttpClient` / `HttpClientConfig`**: Outbound HTTP client abstraction operating on `HttpRequest` and `HttpResponse`, backed by Apache HttpClient 5's `PoolingHttpClientConnectionManager` with `baseUri` resolution and live runtime reconfiguration of connection timeouts, response timeouts, pool sizes, and TTLs.
 
 ### 4. Live-Configurable JDBC DataSource (`dfb.fitz.jdbc`)
 - **`MutableDataSource` / `DatabaseConfig`**: A `javax.sql.DataSource` (`AutoCloseable`) delegating to HikariCP's `HikariDataSource`. Supports live runtime reconfiguration via `setDatabaseConfig(DatabaseConfig)` — updating credentials, timeouts, and pool sizes in-place via `HikariConfigMXBean` (and soft-evicting connections when credentials rotate) when the JDBC URL is unchanged, or cleanly closing and replacing the pool when the JDBC URL changes.

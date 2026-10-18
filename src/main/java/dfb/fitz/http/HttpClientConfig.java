@@ -6,7 +6,7 @@ import lombok.Getter;
 import java.time.Duration;
 
 /**
- * Immutable configuration for {@link ApacheHttpClient}, including an optional {@code baseUri},
+ * Immutable configuration for {@link MutableHttpClient}, including an optional {@code baseUri},
  * connection timeouts, response timeouts, connection-request timeouts, connection pool sizes,
  * and TTL settings.
  */

@@ -31,7 +31,7 @@ import java.util.Map;
  * {@link PoolingHttpClientConnectionManager} that supports live runtime reconfiguration
  * via {@link #setConfig(HttpClientConfig)}.
  */
-public class ApacheHttpClient implements HttpClient {
+public class MutableHttpClient implements HttpClient {
     private static final TimeValue VALIDATE_AFTER_INACTIVITY = TimeValue.ofSeconds(2);
 
     private final PoolingHttpClientConnectionManager connectionManager;
@@ -39,19 +39,19 @@ public class ApacheHttpClient implements HttpClient {
     private volatile HttpClientConfig config;
 
     /**
-     * Creates an {@code ApacheHttpClient} with default {@link HttpClientConfig} settings.
+     * Creates an {@code MutableHttpClient} with default {@link HttpClientConfig} settings.
      */
-    public ApacheHttpClient() {
+    public MutableHttpClient() {
         this(new HttpClientConfig());
     }
 
     /**
-     * Creates an {@code ApacheHttpClient} initialized with the given {@link HttpClientConfig}.
+     * Creates an {@code MutableHttpClient} initialized with the given {@link HttpClientConfig}.
      *
      * @param config the initial client configuration (must not be {@code null})
      * @throws NullPointerException if {@code config} is {@code null}
      */
-    public ApacheHttpClient(HttpClientConfig config) {
+    public MutableHttpClient(HttpClientConfig config) {
         Validate.nonNull(config, "config");
         this.connectionManager = new PoolingHttpClientConnectionManager();
         applyConfigToConnectionManager(config);

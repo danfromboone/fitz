@@ -187,6 +187,28 @@ public class HttpHeaders {
     }
 
     /**
+     * Returns the parsed {@link MimeType} from the {@code Content-Type} header, if present.
+     *
+     * @return the parsed {@link MimeType}, or {@code null} if no {@code Content-Type} header is set
+     * @throws IllegalArgumentException if the {@code Content-Type} header value is malformed
+     */
+    public MimeType getContentType() {
+        String value = getFirst("Content-Type");
+        return (value != null && !value.isBlank()) ? MimeType.parse(value) : null;
+    }
+
+    /**
+     * Sets the {@code Content-Type} header from the given {@link MimeType}.
+     *
+     * @param mimeType the {@link MimeType} to set (must not be {@code null})
+     * @throws NullPointerException if {@code mimeType} is {@code null}
+     */
+    public void setContentType(MimeType mimeType) {
+        Validate.nonNull(mimeType, "mimeType");
+        set("Content-Type", mimeType.toString());
+    }
+
+    /**
      * Checks whether this header collection contains no headers.
      *
      * @return {@code true} if empty; {@code false} otherwise
