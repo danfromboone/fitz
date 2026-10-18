@@ -71,6 +71,6 @@ public class ApplicationContext implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-        Closeables.closeQuietly(propertySource);
+        Closeables.closeAllQuietly(dataContext, propertySource);
     }
 }

@@ -1,8 +1,7 @@
 package dfb.demo
 
-import dfb.demo.DataContext
-import dfb.demo.DatabaseConfig
-import dfb.demo.MutableDataSource
+import dfb.fitz.jdbc.DatabaseConfig
+import dfb.fitz.jdbc.MutableDataSource
 import dfb.fitz.property.CompositePropertySource
 import dfb.fitz.property.DecryptingPropertySource
 import dfb.fitz.property.FilePropertySource

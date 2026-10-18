@@ -32,12 +32,14 @@ dependencies {
     testAnnotationProcessor("org.projectlombok:lombok:${lombokVersion}")
 
     implementation('org.apache.httpcomponents.client5:httpclient5:5.6.5')
+    implementation('com.zaxxer:HikariCP:7.1.0')
 
     implementation('org.slf4j:slf4j-api:2.0.20')
     runtimeOnly('ch.qos.logback:logback-classic:1.6.5')
 
     compileOnly('jakarta.servlet:jakarta.servlet-api:6.1.0')
     testImplementation('jakarta.servlet:jakarta.servlet-api:6.1.0')
+    testImplementation('com.h2database:h2:2.5.252')
 
     testImplementation("org.spockframework:spock-core:${spockVersion}")
     testRuntimeOnly('net.bytebuddy:byte-buddy:1.18.15')

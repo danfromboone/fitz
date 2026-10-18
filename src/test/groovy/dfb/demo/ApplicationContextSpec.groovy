@@ -1,7 +1,6 @@
 package dfb.demo
 
-import dfb.demo.ApplicationContext
-import dfb.demo.MutableDataSource
+import dfb.fitz.jdbc.MutableDataSource
 import jakarta.servlet.ServletContext
 import jakarta.servlet.ServletContextEvent
 import jakarta.servlet.ServletRegistration

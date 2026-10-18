@@ -1,5 +1,8 @@
 package dfb.demo;
 
+import dfb.fitz.Closeables;
+import dfb.fitz.jdbc.DatabaseConfig;
+import dfb.fitz.jdbc.MutableDataSource;
 import dfb.fitz.property.MutablePropertySource;
 import lombok.Getter;
 import org.slf4j.Logger;
@@ -8,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import javax.sql.DataSource;
 
 @Getter
-public class DataContext {
+public class DataContext implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(DataContext.class);
 
     private final MutableDataSource dataSource;
@@ -28,7 +31,7 @@ public class DataContext {
         });
     }
 
-    public DatabaseConfig getDatabaseConfig(){
+    public DatabaseConfig getDatabaseConfig() {
         return new DatabaseConfig(
                 propertySource.getProperty("database.url"),
                 propertySource.getProperty("database.username"),
@@ -40,4 +43,8 @@ public class DataContext {
         return this.dataSource;
     }
 
+    @Override
+    public void close() {
+        Closeables.closeQuietly(dataSource);
+    }
 }

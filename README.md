@@ -36,7 +36,10 @@ Provides clean HTTP value objects over Jakarta Servlet APIs and outbound HTTP cl
 - **`HttpUri` / `HttpQueryParams` / `HttpHeaders` / `HttpMethod`**: Rich utilities for URI regex matching, named path-parameter extraction (`(?<id>[^/]+)`), decoded multi-value query parameters, and case-insensitive headers.
 - **`HttpClient` / `ApacheHttpClient` / `HttpClientConfig`**: Outbound HTTP client abstraction operating on `HttpRequest` and `HttpResponse`, backed by Apache HttpClient 5's `PoolingHttpClientConnectionManager` with `baseUri` resolution and live runtime reconfiguration of connection timeouts, response timeouts, pool sizes, and TTLs.
 
-### 4. Live-Configurable Property Subsystem (`dfb.fitz.property`)
+### 4. Live-Configurable JDBC DataSource (`dfb.fitz.jdbc`)
+- **`MutableDataSource` / `DatabaseConfig`**: A `javax.sql.DataSource` (`AutoCloseable`) delegating to HikariCP's `HikariDataSource`. Supports live runtime reconfiguration via `setDatabaseConfig(DatabaseConfig)` — updating credentials, timeouts, and pool sizes in-place via `HikariConfigMXBean` (and soft-evicting connections when credentials rotate) when the JDBC URL is unchanged, or cleanly closing and replacing the pool when the JDBC URL changes.
+
+### 5. Live-Configurable Property Subsystem (`dfb.fitz.property`)
 A composable, decorator-based configuration subsystem supporting:
 
 - **Pluggable backends (`PropertySource`, `FilePropertySource`):** Load key-value properties from filesystem paths, classpath resources, or custom sources (e.g., databases, REST APIs, in-memory maps).
@@ -44,11 +47,11 @@ A composable, decorator-based configuration subsystem supporting:
 - **Independent polling & live events (`MutablePropertySource`, `PollingPropertySource`):** Poll individual property sources at their own intervals (`Duration`), diff snapshots, and notify listeners (including regex-filtered key listeners like `registerListener("database\\..*", () -> ...)`).
 - **Transparent decryption (`DecryptingPropertySource`, `PropertyEncryptor`):** Automatically decrypts `ENC(<base64>)` property values using `AES/GCM/NoPadding`. The path to the external OS encryption key file is resolved dynamically from configuration via `property.encryption.key.path`.
 
-### 5. Sample Application (`dfb.demo` & `dfb.demo.domain`)
+### 6. Sample Application (`dfb.demo` & `dfb.demo.domain`)
 Demonstrates how an application uses **fitz**:
 
 - **`ApplicationContext`**: A `@WebListener` (`ServletContextListener`) that acts as the composition root—wiring the property pipeline, `DataContext`, repositories (`FooRepository`, `GooRepository`), services (`FooService`, `GooService`), controllers (`FooController`), and registering `DispatcherServlet` with the servlet container.
-- **`DataContext` / `DatabaseConfig` / `MutableDataSource`**: Demonstrates live, thread-safe reconfiguration. `DataContext` registers a `"database\\..*"` listener on `MutablePropertySource` and atomically swaps an immutable `DatabaseConfig` instance onto `MutableDataSource` whenever database properties change—without re-instantiating repositories or services.
+- **`DataContext`**: Demonstrates live, thread-safe reconfiguration. `DataContext` registers a `"database\\..*"` listener on `MutablePropertySource` and updates `MutableDataSource` with a new `DatabaseConfig` whenever database properties change—without re-instantiating repositories or services.
 - **`Foo` / `Goo` (`dfb.demo.domain`)**: Sample domain model classes used by the repositories and services.
 
 ```text
