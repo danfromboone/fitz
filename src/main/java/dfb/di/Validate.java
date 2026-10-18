@@ -73,6 +73,21 @@ public final class Validate {
     }
 
     /**
+     * Validates that the given integer value is strictly positive ({@code > 0}).
+     *
+     * @param value the integer value to check
+     * @param name  the parameter or field name used in the exception message
+     * @return {@code value} if strictly positive
+     * @throws IllegalArgumentException if {@code value <= 0}
+     */
+    public static int positive(int value, String name) {
+        if (value <= 0) {
+            throw new IllegalArgumentException(name + " must be positive: " + value);
+        }
+        return value;
+    }
+
+    /**
      * Validates that the given {@link Duration} is non-null and strictly positive.
      *
      * @param duration the duration to check

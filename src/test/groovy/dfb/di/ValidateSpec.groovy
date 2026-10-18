@@ -112,4 +112,24 @@ class ValidateSpec extends Specification {
         where:
         duration << [Duration.ZERO, Duration.ofMillis(-1), Duration.ofSeconds(-5)]
     }
+
+    def "positive returns int when strictly positive"() {
+        expect:
+        Validate.positive(val, "maxTotalConnections") == val
+
+        where:
+        val << [1, 20, 100]
+    }
+
+    def "positive throws IllegalArgumentException when int is zero or negative"() {
+        when:
+        Validate.positive(val, "maxTotalConnections")
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "maxTotalConnections must be positive: $val"
+
+        where:
+        val << [0, -1, -50]
+    }
 }

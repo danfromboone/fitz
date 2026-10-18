@@ -27,11 +27,12 @@ Instead of relying on runtime reflection, classpath scanning, annotation process
 - **`Controller`**: Simple interface (`canHandle(HttpRequest)` and `handle(HttpRequest)`) for handling web requests without coupling to Jakarta Servlet APIs.
 
 ### 3. HTTP Abstractions (`dfb.di.http`)
-Provides clean HTTP value objects over Jakarta Servlet APIs so application controllers remain decoupled from `HttpServletRequest` and `HttpServletResponse`:
+Provides clean HTTP value objects over Jakarta Servlet APIs and outbound HTTP client calls:
 
 - **`HttpRequest` / `HttpRequestBody`**: High-level request wrapper with URI, method, headers, query parameters, and lazy body reading.
-- **`HttpResponse` / `HttpResponseBody` / `HttpStatus`**: Value objects representing outgoing HTTP responses, status codes, headers, and payloads.
+- **`HttpResponse` / `HttpResponseBody` / `HttpStatus`**: Value objects representing HTTP responses, status codes, headers, and payloads.
 - **`HttpUri` / `HttpQueryParams` / `HttpHeaders` / `HttpMethod`**: Rich utilities for URI regex matching, named path-parameter extraction (`(?<id>[^/]+)`), decoded multi-value query parameters, and case-insensitive headers.
+- **`HttpClient` / `ApacheHttpClient` / `HttpClientConfig`**: Outbound HTTP client abstraction operating on `HttpRequest` and `HttpResponse`, backed by Apache HttpClient 5's `PoolingHttpClientConnectionManager` with live runtime reconfiguration of connection timeouts, response timeouts, pool sizes, and TTLs.
 
 ### 4. Live-Configurable Property Subsystem (`dfb.di.property`)
 A composable, decorator-based configuration subsystem supporting:
