@@ -1,7 +1,7 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'groovy'
-    id 'war'
+    id 'maven-publish'
 }
 
 group 'dfb'
@@ -34,10 +34,10 @@ dependencies {
     implementation('org.apache.httpcomponents.client5:httpclient5:5.6.5')
     implementation('com.zaxxer:HikariCP:7.1.0')
 
-    implementation('org.slf4j:slf4j-api:2.0.20')
-    runtimeOnly('ch.qos.logback:logback-classic:1.6.5')
+    api('org.slf4j:slf4j-api:2.0.20')
+    testRuntimeOnly('ch.qos.logback:logback-classic:1.6.5')
 
-    compileOnly('jakarta.servlet:jakarta.servlet-api:6.1.0')
+    compileOnlyApi('jakarta.servlet:jakarta.servlet-api:6.1.0')
     testImplementation('jakarta.servlet:jakarta.servlet-api:6.1.0')
     testImplementation('com.h2database:h2:2.5.252')
 
@@ -45,6 +45,14 @@ dependencies {
     testRuntimeOnly('net.bytebuddy:byte-buddy:1.18.15')
     testRuntimeOnly('org.objenesis:objenesis:3.6')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher')
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
 }
 
 test {
