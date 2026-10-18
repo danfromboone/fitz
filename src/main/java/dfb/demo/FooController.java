@@ -1,7 +1,7 @@
 package dfb.demo;
 
-import dfb.di.web.Controller;
-import dfb.di.http.*;
+import dfb.fitz.web.Controller;
+import dfb.fitz.http.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

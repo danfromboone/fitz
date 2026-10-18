@@ -1,10 +1,10 @@
 package dfb.demo
 
-import dfb.di.web.Controller
-import dfb.di.web.DispatcherServlet
-import dfb.di.http.HttpRequest
-import dfb.di.http.HttpResponse
-import dfb.di.http.HttpStatus
+import dfb.fitz.web.Controller
+import dfb.fitz.web.DispatcherServlet
+import dfb.fitz.http.HttpRequest
+import dfb.fitz.http.HttpResponse
+import dfb.fitz.http.HttpStatus
 import dfb.demo.ApplicationContext
 import dfb.demo.FooController
 import dfb.demo.FooService

@@ -3,12 +3,12 @@ package dfb.demo
 import dfb.demo.DataContext
 import dfb.demo.DatabaseConfig
 import dfb.demo.MutableDataSource
-import dfb.di.property.CompositePropertySource
-import dfb.di.property.DecryptingPropertySource
-import dfb.di.property.FilePropertySource
-import dfb.di.property.PollingPropertySource
-import dfb.di.property.PropertyEncryptor
-import dfb.di.property.PropertySource
+import dfb.fitz.property.CompositePropertySource
+import dfb.fitz.property.DecryptingPropertySource
+import dfb.fitz.property.FilePropertySource
+import dfb.fitz.property.PollingPropertySource
+import dfb.fitz.property.PropertyEncryptor
+import dfb.fitz.property.PropertySource
 import spock.lang.Specification
 import spock.lang.TempDir
 

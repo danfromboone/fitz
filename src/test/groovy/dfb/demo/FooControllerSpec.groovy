@@ -1,11 +1,11 @@
 package dfb.demo
 
-import dfb.di.http.HttpHeaders
-import dfb.di.http.HttpMethod
-import dfb.di.http.HttpRequest
-import dfb.di.http.HttpRequestBody
-import dfb.di.http.HttpStatus
-import dfb.di.http.HttpUri
+import dfb.fitz.http.HttpHeaders
+import dfb.fitz.http.HttpMethod
+import dfb.fitz.http.HttpRequest
+import dfb.fitz.http.HttpRequestBody
+import dfb.fitz.http.HttpStatus
+import dfb.fitz.http.HttpUri
 import dfb.demo.FooController
 import dfb.demo.FooService
 import spock.lang.Specification

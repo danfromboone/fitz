@@ -1,6 +1,6 @@
 package dfb.demo;
 
-import dfb.di.Validate;
+import dfb.fitz.Validate;
 import lombok.Getter;
 
 @Getter

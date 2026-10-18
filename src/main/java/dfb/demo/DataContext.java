@@ -1,6 +1,6 @@
 package dfb.demo;
 
-import dfb.di.property.MutablePropertySource;
+import dfb.fitz.property.MutablePropertySource;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
