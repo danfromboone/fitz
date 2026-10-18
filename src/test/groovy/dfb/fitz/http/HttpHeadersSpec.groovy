@@ -102,7 +102,13 @@ class HttpHeadersSpec extends Specification {
         thrown(NullPointerException)
 
         when:
-        headers.getValues(null)
+        headers.getValues((String) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        headers.getValues((HttpHeader) null)
 
         then:
         thrown(NullPointerException)
@@ -114,7 +120,13 @@ class HttpHeadersSpec extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        headers.getFirst(null)
+        headers.getFirst((String) null)
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        headers.getFirst((HttpHeader) null)
 
         then:
         thrown(NullPointerException)
@@ -132,7 +144,13 @@ class HttpHeadersSpec extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        headers.add(null, "val")
+        headers.add((String) null, "val")
+
+        then:
+        thrown(NullPointerException)
+
+        when:
+        headers.add((HttpHeader) null, "val")
 
         then:
         thrown(NullPointerException)

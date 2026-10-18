@@ -112,6 +112,18 @@ public class HttpHeaders {
     }
 
     /**
+     * Returns all values associated with the given {@link HttpHeader}.
+     *
+     * @param header the header to look up (must not be {@code null})
+     * @return an unmodifiable list of values, or an empty list if none exist
+     * @throws NullPointerException if {@code header} is {@code null}
+     */
+    public List<String> getValues(HttpHeader header) {
+        Validate.nonNull(header, "header");
+        return getValues(header.getHeaderName());
+    }
+
+    /**
      * Returns all values associated with the given header name (case-insensitive).
      *
      * @param name the header name to look up (must not be {@code null} or blank)
@@ -125,6 +137,18 @@ public class HttpHeaders {
     }
 
     /**
+     * Returns the first value associated with the given {@link HttpHeader}.
+     *
+     * @param header the header to look up (must not be {@code null})
+     * @return the first header value, or {@code null} if the header is not present or has no values
+     * @throws NullPointerException if {@code header} is {@code null}
+     */
+    public String getFirst(HttpHeader header) {
+        Validate.nonNull(header, "header");
+        return getFirst(header.getHeaderName());
+    }
+
+    /**
      * Returns the first value associated with the given header name (case-insensitive).
      *
      * @param name the header name to look up (must not be {@code null} or blank)
@@ -135,6 +159,19 @@ public class HttpHeaders {
     public String getFirst(String name) {
         List<String> values = headers.get(Validate.trimmedNonBlank(name, "header name"));
         return (values == null || values.isEmpty()) ? null : values.getFirst();
+    }
+
+    /**
+     * Replaces any existing values for the given {@link HttpHeader} with a single value (or no value if
+     * {@code value} is {@code null} or blank).
+     *
+     * @param header the header to set (must not be {@code null})
+     * @param value  the header value to set; may be {@code null} or empty for a header without a value
+     * @throws NullPointerException if {@code header} is {@code null}
+     */
+    public void set(HttpHeader header, String value) {
+        Validate.nonNull(header, "header");
+        set(header.getHeaderName(), value);
     }
 
     /**
@@ -157,6 +194,19 @@ public class HttpHeaders {
     }
 
     /**
+     * Appends a value to the list of values for the given {@link HttpHeader} (or registers the header
+     * with no value if {@code value} is {@code null} or blank).
+     *
+     * @param header the header to add to (must not be {@code null})
+     * @param value  the header value to add; may be {@code null} or empty for a header without a value
+     * @throws NullPointerException if {@code header} is {@code null}
+     */
+    public void add(HttpHeader header, String value) {
+        Validate.nonNull(header, "header");
+        add(header.getHeaderName(), value);
+    }
+
+    /**
      * Appends a value to the list of values for the given header name (or registers the header
      * with no value if {@code value} is {@code null} or blank).
      *
@@ -172,6 +222,18 @@ public class HttpHeaders {
         if (!trimmedValue.isEmpty()) {
             values.add(trimmedValue);
         }
+    }
+
+    /**
+     * Checks whether the given {@link HttpHeader} is present (case-insensitive).
+     *
+     * @param header the header to check (must not be {@code null})
+     * @return {@code true} if present; {@code false} otherwise
+     * @throws NullPointerException if {@code header} is {@code null}
+     */
+    public boolean contains(HttpHeader header) {
+        Validate.nonNull(header, "header");
+        return contains(header.getHeaderName());
     }
 
     /**
@@ -193,7 +255,7 @@ public class HttpHeaders {
      * @throws IllegalArgumentException if the {@code Content-Type} header value is malformed
      */
     public MimeType getContentType() {
-        String value = getFirst("Content-Type");
+        String value = getFirst(HttpHeader.CONTENT_TYPE);
         return (value != null && !value.isBlank()) ? MimeType.parse(value) : null;
     }
 
@@ -205,7 +267,7 @@ public class HttpHeaders {
      */
     public void setContentType(MimeType mimeType) {
         Validate.nonNull(mimeType, "mimeType");
-        set("Content-Type", mimeType.toString());
+        set(HttpHeader.CONTENT_TYPE, mimeType.toString());
     }
 
     /**
