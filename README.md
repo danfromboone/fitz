@@ -34,7 +34,7 @@ Provides clean HTTP value objects over Jakarta Servlet APIs and outbound HTTP cl
 
 - **`HttpRequest` / `HttpRequestBody`**: High-level request wrapper with URI, method, headers, query parameters, and lazy body reading.
 - **`HttpResponse` / `HttpResponseBody` / `HttpStatus`**: Value objects representing HTTP responses, status codes, headers, and payloads.
-- **`HttpUri` / `HttpQueryParams` / `HttpHeaders` / `HttpHeader` / `HttpMethod` / `MimeType`**: Rich utilities for URI regex matching, named path-parameter extraction (`(?<id>[^/]+)`), decoded multi-value query parameters, case-insensitive headers, cached standard header keys, and MIME media types.
+- **`HttpUri` / `HttpQueryParams` / `HttpHeaders` / `HttpHeaderName` / `HttpMethod` / `MimeType`**: Rich utilities for URI regex matching, named path-parameter extraction (`(?<id>[^/]+)`), decoded multi-value query parameters, case-insensitive headers, cached standard header names, and MIME media types.
 - **`HttpClient` / `MutableHttpClient` / `HttpClientConfig`**: Outbound HTTP client abstraction operating on `HttpRequest` and `HttpResponse`, backed by Apache HttpClient 5's `PoolingHttpClientConnectionManager` with `baseUri` resolution and live runtime reconfiguration of connection timeouts, response timeouts, pool sizes, and TTLs.
 
 ### 4. Live-Configurable JDBC DataSource (`dfb.fitz.jdbc`)

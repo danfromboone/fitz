@@ -29,7 +29,7 @@ public class HttpUri {
      */
     public HttpUri(String uri) {
         this.uri = URI.create(Validate.trimmedNonBlank(uri, "uri"));
-        this.queryParams = new HttpQueryParams(this.uri);
+        this.queryParams = HttpQueryParams.from(this.uri);
     }
 
     /**

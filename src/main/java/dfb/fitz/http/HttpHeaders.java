@@ -112,15 +112,15 @@ public class HttpHeaders {
     }
 
     /**
-     * Returns all values associated with the given {@link HttpHeader}.
+     * Returns all values associated with the given {@link HttpHeaderName}.
      *
-     * @param header the header to look up (must not be {@code null})
+     * @param headerName the header name to look up (must not be {@code null})
      * @return an unmodifiable list of values, or an empty list if none exist
-     * @throws NullPointerException if {@code header} is {@code null}
+     * @throws NullPointerException if {@code headerName} is {@code null}
      */
-    public List<String> getValues(HttpHeader header) {
-        Validate.nonNull(header, "header");
-        return getValues(header.getHeaderName());
+    public List<String> getValues(HttpHeaderName headerName) {
+        Validate.nonNull(headerName, "headerName");
+        return getValues(headerName.getName());
     }
 
     /**
@@ -137,15 +137,15 @@ public class HttpHeaders {
     }
 
     /**
-     * Returns the first value associated with the given {@link HttpHeader}.
+     * Returns the first value associated with the given {@link HttpHeaderName}.
      *
-     * @param header the header to look up (must not be {@code null})
+     * @param headerName the header name to look up (must not be {@code null})
      * @return the first header value, or {@code null} if the header is not present or has no values
-     * @throws NullPointerException if {@code header} is {@code null}
+     * @throws NullPointerException if {@code headerName} is {@code null}
      */
-    public String getFirst(HttpHeader header) {
-        Validate.nonNull(header, "header");
-        return getFirst(header.getHeaderName());
+    public String getFirst(HttpHeaderName headerName) {
+        Validate.nonNull(headerName, "headerName");
+        return getFirst(headerName.getName());
     }
 
     /**
@@ -162,16 +162,16 @@ public class HttpHeaders {
     }
 
     /**
-     * Replaces any existing values for the given {@link HttpHeader} with a single value (or no value if
+     * Replaces any existing values for the given {@link HttpHeaderName} with a single value (or no value if
      * {@code value} is {@code null} or blank).
      *
-     * @param header the header to set (must not be {@code null})
-     * @param value  the header value to set; may be {@code null} or empty for a header without a value
-     * @throws NullPointerException if {@code header} is {@code null}
+     * @param headerName the header name to set (must not be {@code null})
+     * @param value      the header value to set; may be {@code null} or empty for a header without a value
+     * @throws NullPointerException if {@code headerName} is {@code null}
      */
-    public void set(HttpHeader header, String value) {
-        Validate.nonNull(header, "header");
-        set(header.getHeaderName(), value);
+    public void set(HttpHeaderName headerName, String value) {
+        Validate.nonNull(headerName, "headerName");
+        set(headerName.getName(), value);
     }
 
     /**
@@ -194,16 +194,16 @@ public class HttpHeaders {
     }
 
     /**
-     * Appends a value to the list of values for the given {@link HttpHeader} (or registers the header
+     * Appends a value to the list of values for the given {@link HttpHeaderName} (or registers the header
      * with no value if {@code value} is {@code null} or blank).
      *
-     * @param header the header to add to (must not be {@code null})
-     * @param value  the header value to add; may be {@code null} or empty for a header without a value
-     * @throws NullPointerException if {@code header} is {@code null}
+     * @param headerName the header name to add to (must not be {@code null})
+     * @param value      the header value to add; may be {@code null} or empty for a header without a value
+     * @throws NullPointerException if {@code headerName} is {@code null}
      */
-    public void add(HttpHeader header, String value) {
-        Validate.nonNull(header, "header");
-        add(header.getHeaderName(), value);
+    public void add(HttpHeaderName headerName, String value) {
+        Validate.nonNull(headerName, "headerName");
+        add(headerName.getName(), value);
     }
 
     /**
@@ -225,15 +225,15 @@ public class HttpHeaders {
     }
 
     /**
-     * Checks whether the given {@link HttpHeader} is present (case-insensitive).
+     * Checks whether the given {@link HttpHeaderName} is present (case-insensitive).
      *
-     * @param header the header to check (must not be {@code null})
+     * @param headerName the header name to check (must not be {@code null})
      * @return {@code true} if present; {@code false} otherwise
-     * @throws NullPointerException if {@code header} is {@code null}
+     * @throws NullPointerException if {@code headerName} is {@code null}
      */
-    public boolean contains(HttpHeader header) {
-        Validate.nonNull(header, "header");
-        return contains(header.getHeaderName());
+    public boolean contains(HttpHeaderName headerName) {
+        Validate.nonNull(headerName, "headerName");
+        return contains(headerName.getName());
     }
 
     /**
@@ -255,7 +255,7 @@ public class HttpHeaders {
      * @throws IllegalArgumentException if the {@code Content-Type} header value is malformed
      */
     public MimeType getContentType() {
-        String value = getFirst(HttpHeader.CONTENT_TYPE);
+        String value = getFirst(HttpHeaderName.CONTENT_TYPE);
         return (value != null && !value.isBlank()) ? MimeType.parse(value) : null;
     }
 
@@ -267,7 +267,7 @@ public class HttpHeaders {
      */
     public void setContentType(MimeType mimeType) {
         Validate.nonNull(mimeType, "mimeType");
-        set(HttpHeader.CONTENT_TYPE, mimeType.toString());
+        set(HttpHeaderName.CONTENT_TYPE, mimeType.toString());
     }
 
     /**

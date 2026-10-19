@@ -108,7 +108,7 @@ class HttpHeadersSpec extends Specification {
         thrown(NullPointerException)
 
         when:
-        headers.getValues((HttpHeader) null)
+        headers.getValues((HttpHeaderName) null)
 
         then:
         thrown(NullPointerException)
@@ -126,7 +126,7 @@ class HttpHeadersSpec extends Specification {
         thrown(NullPointerException)
 
         when:
-        headers.getFirst((HttpHeader) null)
+        headers.getFirst((HttpHeaderName) null)
 
         then:
         thrown(NullPointerException)
@@ -150,7 +150,7 @@ class HttpHeadersSpec extends Specification {
         thrown(NullPointerException)
 
         when:
-        headers.add((HttpHeader) null, "val")
+        headers.add((HttpHeaderName) null, "val")
 
         then:
         thrown(NullPointerException)
