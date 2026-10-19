@@ -3,21 +3,26 @@ package dfb.fitz.http;
 import dfb.fitz.Validate;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Encapsulates an HTTP request URI, providing access to its path, query parameters,
- * regex matching, and named path parameter extraction.
+ * Encapsulates an HTTP request URI, providing access to its path, path segments,
+ * query parameters, regex matching, and named path parameter extraction.
  */
 public class HttpUri {
     private static final Map<String, Pattern> PATTERN_CACHE = new ConcurrentHashMap<>();
 
     private final URI uri;
+    private final List<String> pathSegments;
     private final HttpQueryParams queryParams;
 
     /**
@@ -29,7 +34,22 @@ public class HttpUri {
      */
     public HttpUri(String uri) {
         this.uri = URI.create(Validate.trimmedNonBlank(uri, "uri"));
+        this.pathSegments = parsePathSegments(this.uri.getRawPath());
         this.queryParams = HttpQueryParams.from(this.uri);
+    }
+
+    private static List<String> parsePathSegments(String rawPath) {
+        if (rawPath == null || rawPath.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<String> segments = new ArrayList<>();
+        for (String rawSegment : rawPath.split("/")) {
+            if (!rawSegment.isEmpty()) {
+                String decoded = URLDecoder.decode(rawSegment.replace("+", "%2B"), StandardCharsets.UTF_8);
+                segments.add(decoded);
+            }
+        }
+        return Collections.unmodifiableList(segments);
     }
 
     /**
@@ -96,6 +116,30 @@ public class HttpUri {
      */
     public String getPath() {
         return uri.getPath();
+    }
+
+    /**
+     * Returns an unmodifiable list of the non-empty, URL-decoded path segments of this URI
+     * (e.g., {@code "/some-id/123"} yields {@code ["some-id", "123"]}).
+     *
+     * <p>Splits the raw path on {@code '/'} before decoding each segment so percent-encoded
+     * slashes ({@code %2F}) within a segment are preserved.
+     *
+     * @return the list of decoded path segments (never {@code null})
+     */
+    public List<String> getPathSegments() {
+        return pathSegments;
+    }
+
+    /**
+     * Returns the decoded path segment at the given 0-based index, or {@code null} if the
+     * index is out of bounds.
+     *
+     * @param index the 0-based segment index
+     * @return the decoded path segment at {@code index}, or {@code null} if out of bounds
+     */
+    public String getPathSegment(int index) {
+        return (index >= 0 && index < pathSegments.size()) ? pathSegments.get(index) : null;
     }
 
     /**

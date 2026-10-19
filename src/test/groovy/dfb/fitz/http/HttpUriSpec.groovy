@@ -170,4 +170,28 @@ class HttpUriSpec extends Specification {
         then:
         thrown(IllegalArgumentException)
     }
+
+    def "extracts decoded positional path segments while preserving encoded slashes and plus signs"() {
+        given:
+        def httpUri = new HttpUri("http://app/some-id/123/John%20Doe/a%2Fb/c+d")
+
+        expect:
+        httpUri.pathSegments == ["some-id", "123", "John Doe", "a/b", "c+d"]
+        httpUri.getPathSegment(0) == "some-id"
+        httpUri.getPathSegment(1) == "123"
+        httpUri.getPathSegment(3) == "a/b"
+        httpUri.getPathSegment(4) == "c+d"
+        httpUri.getPathSegment(-1) == null
+        httpUri.getPathSegment(5) == null
+
+        and: "empty or root paths return an empty unmodifiable list"
+        new HttpUri("http://app").pathSegments == []
+        new HttpUri("http://app/").pathSegments == []
+
+        when:
+        httpUri.pathSegments.add("extra")
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
 }
