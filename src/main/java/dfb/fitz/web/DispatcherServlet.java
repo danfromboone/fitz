@@ -34,7 +34,8 @@ public class DispatcherServlet extends HttpServlet {
      *
      * @param controllers the controllers to evaluate in iteration order; if {@code null}, an empty list is used
      */
-    public DispatcherServlet(Collection<Controller> controllers) {
+    public
+    DispatcherServlet(Collection<Controller> controllers) {
         this.controllers = (controllers != null)
                 ? List.copyOf(controllers)
                 : Collections.emptyList();
@@ -91,11 +92,10 @@ public class DispatcherServlet extends HttpServlet {
         } catch (Exception e) {
             log.error("Unhandled exception while processing request", e);
             HttpHeaders errorHeaders = new HttpHeaders();
-            errorHeaders.set("Content-Type", "text/plain; charset=UTF-8");
-            String errorMessage = (e.getMessage() != null) ? e.getMessage() : "Internal Server Error";
+            errorHeaders.setContentType(MimeType.TEXT_PLAIN_UTF8);
             HttpResponse errorResponse = new HttpResponse(
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    HttpResponseBody.of(errorMessage),
+                    HttpResponseBody.of(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase()),
                     errorHeaders
             );
             writeResponse(errorResponse, response);

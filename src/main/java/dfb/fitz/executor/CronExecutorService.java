@@ -1,4 +1,4 @@
-package dfb.fitz.task;
+package dfb.fitz.executor;
 
 import com.cronutils.model.Cron;
 import com.cronutils.model.CronType;
