@@ -37,10 +37,16 @@ Provides clean HTTP value objects over Jakarta Servlet APIs and outbound HTTP cl
 - **`HttpUri` / `HttpQueryParams` / `HttpHeaders` / `HttpHeaderName` / `HttpMethod` / `MimeType`**: Rich utilities for URI regex matching, named path-parameter extraction (`(?<id>[^/]+)`), decoded multi-value query parameters, case-insensitive headers, cached standard header names, and MIME media types.
 - **`HttpClient` / `MutableHttpClient` / `HttpClientConfig`**: Outbound HTTP client abstraction operating on `HttpRequest` and `HttpResponse`, backed by Apache HttpClient 5's `PoolingHttpClientConnectionManager` with `baseUri` resolution and live runtime reconfiguration of connection timeouts, response timeouts, pool sizes, and TTLs.
 
-### 4. Live-Configurable JDBC DataSource (`dfb.fitz.jdbc`)
+### 4. JDBC Subsystem & Utilities (`dfb.fitz.jdbc`)
+- **`Jdbc`**: Lightweight, pure-Java JDBC utility for DDL (`execute`), writes (`update`, `batchUpdate`), and reads (`query`, `queryOne`, `queryFirst`). Overloads support both unmanaged `Connection` instances (which are never closed) and `DataSource` instances (which acquire and safely close connections via try-with-resources).
+- **`RowMapper<T>`**: Functional interface (`map(ResultSet)`) for lambda-based row extraction.
+- **`WrappedSqlException`**: Unchecked `RuntimeException` wrapping `SQLException` to eliminate checked-exception boilerplate in consumers.
 - **`MutableDataSource` / `DatabaseConfig`**: A `javax.sql.DataSource` (`AutoCloseable`) delegating to HikariCP's `HikariDataSource`. Supports live runtime reconfiguration via `setDatabaseConfig(DatabaseConfig)` — updating credentials, timeouts, and pool sizes in-place via `HikariConfigMXBean` (and soft-evicting connections when credentials rotate) when the JDBC URL is unchanged, or cleanly closing and replacing the pool when the JDBC URL changes.
 
-### 5. Live-Configurable Property Subsystem (`dfb.fitz.property`)
+### 5. Dynamic Proxy Utilities (`dfb.fitz.proxy`)
+- **`SupplierProxy`**: Factory for creating JDK dynamic proxies that delegate all method calls to a `Supplier<T>`. Supports dynamic hot-swapping, contextual resolution, and transparent exception propagation.
+
+### 6. Live-Configurable Property Subsystem (`dfb.fitz.property`)
 A composable, decorator-based configuration subsystem supporting:
 
 - **Pluggable backends (`PropertySource`, `FilePropertySource`):** Load key-value properties from filesystem paths, classpath resources, or custom sources (e.g., databases, REST APIs, in-memory maps).
