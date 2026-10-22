@@ -1,5 +1,6 @@
 package dfb.fitz.jdbc;
 
+import dfb.fitz.Closeables;
 import dfb.fitz.Validate;
 
 import javax.sql.DataSource;
@@ -17,18 +18,242 @@ import java.util.Optional;
 /**
  * Lightweight, pure-Java JDBC utility for executing common database operations:
  * reads ({@code query}, {@code queryOne}, {@code queryFirst}),
- * writes ({@code update}, {@code batchUpdate}), and DDL ({@code execute}).
+ * writes ({@code update}, {@code batchUpdate}), DDL ({@code execute}), and scoped transactions.
  * <p>
- * Methods accepting a {@link Connection} <strong>never close the connection</strong>,
- * allowing callers or transaction managers to control connection lifecycles.
- * Methods accepting a {@link DataSource} obtain a connection and safely close it
- * upon completion (including on errors) via try-with-resources.
- * Statements and result sets created internally are always closed via try-with-resources.
+ * Supported usage modes:
+ * <ul>
+ *   <li><strong>Connection-based:</strong> Methods accepting a {@link Connection} <em>never</em> close
+ *       the connection, allowing callers or transaction managers to control connection lifecycles.</li>
+ *   <li><strong>DataSource-based:</strong> Methods accepting a {@link DataSource} automatically participate
+ *       in any active scoped transaction for that DataSource; if no transaction is active, they obtain a
+ *       connection and safely close it upon completion.</li>
+ *   <li><strong>Scoped Ambient:</strong> Within an {@code inTransaction} block, methods without a
+ *       Connection or DataSource parameter automatically bind to the active scoped transaction.</li>
+ * </ul>
  * Any underlying {@link SQLException} is wrapped in an unchecked {@link WrappedSqlException}.
+ * <p>
+ * Transactions are strictly bound to the thread that initiated them. Child threads or other threads
+ * are prohibited from joining or accessing the transaction and will throw an {@link IllegalStateException}.
+ * If another transaction is attempted inside an existing transaction on the same DataSource, it joins
+ * the outer transaction.
  */
 public final class Jdbc {
 
+    private static final ScopedValue<TransactionContext> CURRENT_TRANSACTION = ScopedValue.newInstance();
+    private static final InheritableThreadLocal<TransactionContext> INHERITABLE_TRANSACTION = new InheritableThreadLocal<>();
+
     private Jdbc() {
+    }
+
+    private static TransactionContext getActiveContext() {
+        if (CURRENT_TRANSACTION.isBound()) {
+            TransactionContext tx = CURRENT_TRANSACTION.get();
+            if (tx != null) {
+                tx.checkThreadAccess();
+                return tx;
+            }
+        }
+        TransactionContext tx = INHERITABLE_TRANSACTION.get();
+        if (tx != null) {
+            tx.checkThreadAccess();
+            return tx;
+        }
+        return null;
+    }
+
+    // =========================================================================
+    // Scoped Transactions
+    // =========================================================================
+
+    /**
+     * Executes the given action within a scoped database transaction on the specified {@link DataSource}.
+     * If an error occurs, the transaction is automatically rolled back; otherwise, it is committed.
+     * <p>
+     * If another transaction is attempted inside this transaction on the same DataSource, it joins
+     * the outer transaction. Child threads or other threads must not join this transaction.
+     *
+     * @param dataSource the DataSource on which to run the transaction
+     * @param action     the transactional action to execute
+     * @throws IllegalStateException if a child thread or other thread attempts to join
+     * @throws WrappedSqlException   if a database error occurs during the transaction
+     */
+    public static void inTransaction(DataSource dataSource, TransactionAction action) throws WrappedSqlException {
+        Validate.nonNull(action, "action");
+        inTransaction(dataSource, () -> {
+            action.execute();
+            return null;
+        });
+    }
+
+    /**
+     * Executes the given callback within a scoped database transaction on the specified {@link DataSource}
+     * and returns the result. If an error occurs, the transaction is automatically rolled back; otherwise,
+     * it is committed.
+     * <p>
+     * If another transaction is attempted inside this transaction on the same DataSource, it joins
+     * the outer transaction. Child threads or other threads must not join this transaction.
+     *
+     * @param <T>        the return type
+     * @param dataSource the DataSource on which to run the transaction
+     * @param callback   the transactional callback to execute
+     * @return the result returned by the callback
+     * @throws IllegalStateException if a child thread or other thread attempts to join
+     * @throws WrappedSqlException   if a database error occurs during the transaction
+     */
+    public static <T> T inTransaction(DataSource dataSource, TransactionCallback<T> callback) throws WrappedSqlException {
+        Validate.nonNull(dataSource, "dataSource");
+        Validate.nonNull(callback, "callback");
+
+        // Check if a transaction is already active (throws IllegalStateException if accessed by child thread)
+        TransactionContext current = getActiveContext();
+        if (current != null && current.matches(dataSource)) {
+            // Join outer transaction
+            try {
+                return callback.execute();
+            } catch (RuntimeException | Error e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        Connection connection;
+        try {
+            connection = dataSource.getConnection();
+        } catch (SQLException e) {
+            throw new WrappedSqlException(e);
+        }
+
+        boolean previousAutoCommit;
+        try {
+            previousAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+        } catch (SQLException e) {
+            Closeables.closeQuietly(connection);
+            throw new WrappedSqlException(e);
+        }
+
+        TransactionContext context = new TransactionContext(dataSource, connection);
+        TransactionContext previousTl = INHERITABLE_TRANSACTION.get();
+        INHERITABLE_TRANSACTION.set(context);
+
+        try {
+            T result = ScopedValue.where(CURRENT_TRANSACTION, context).call(callback::execute);
+            if (context.isRollbackOnly()) {
+                connection.rollback();
+                throw new WrappedSqlException(new SQLException("Transaction completed but was marked as rollback-only"));
+            }
+            connection.commit();
+            return result;
+        } catch (Throwable t) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackEx) {
+                t.addSuppressed(rollbackEx);
+            }
+            if (t instanceof RuntimeException re) {
+                throw re;
+            }
+            if (t instanceof Error err) {
+                throw err;
+            }
+            throw new RuntimeException(t);
+        } finally {
+            if (previousTl != null) {
+                INHERITABLE_TRANSACTION.set(previousTl);
+            } else {
+                INHERITABLE_TRANSACTION.remove();
+            }
+            try {
+                connection.setAutoCommit(previousAutoCommit);
+            } catch (SQLException ignored) {
+            }
+            Closeables.closeQuietly(connection);
+        }
+    }
+
+    /**
+     * Alias for {@link #inTransaction(DataSource, TransactionAction)}.
+     */
+    public static void runInTransaction(DataSource dataSource, TransactionAction action) throws WrappedSqlException {
+        inTransaction(dataSource, action);
+    }
+
+    /**
+     * Alias for {@link #inTransaction(DataSource, TransactionCallback)}.
+     */
+    public static <T> T callInTransaction(DataSource dataSource, TransactionCallback<T> callback) throws WrappedSqlException {
+        return inTransaction(dataSource, callback);
+    }
+
+    /**
+     * Alias for {@link #inTransaction(DataSource, TransactionAction)}.
+     */
+    public static void transaction(DataSource dataSource, TransactionAction action) throws WrappedSqlException {
+        inTransaction(dataSource, action);
+    }
+
+    /**
+     * Alias for {@link #inTransaction(DataSource, TransactionCallback)}.
+     */
+    public static <T> T transaction(DataSource dataSource, TransactionCallback<T> callback) throws WrappedSqlException {
+        return inTransaction(dataSource, callback);
+    }
+
+    /**
+     * Checks whether a transaction is currently active in the current scope.
+     *
+     * @return {@code true} if a transaction is active; {@code false} otherwise
+     * @throws IllegalStateException if called from a child thread attempting to access a transaction
+     */
+    public static boolean isTransactionActive() {
+        return getActiveContext() != null;
+    }
+
+    /**
+     * Checks whether a transaction is currently active on the specified {@link DataSource}.
+     *
+     * @param dataSource the DataSource to check
+     * @return {@code true} if an active transaction matches {@code dataSource}; {@code false} otherwise
+     * @throws IllegalStateException if called from a child thread attempting to access a transaction
+     */
+    public static boolean isTransactionActive(DataSource dataSource) {
+        TransactionContext tx = getActiveContext();
+        return tx != null && tx.matches(dataSource);
+    }
+
+    /**
+     * Returns the active {@link Connection} in the current transaction scope, if any.
+     *
+     * @return an {@link Optional} containing the transactional connection, or {@link Optional#empty()}
+     * @throws IllegalStateException if called from a child thread attempting to access a transaction
+     */
+    public static Optional<Connection> currentConnection() {
+        TransactionContext tx = getActiveContext();
+        if (tx != null) {
+            return Optional.of(tx.getConnection());
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Marks the current active transaction as rollback-only.
+     *
+     * @throws IllegalStateException if no transaction is active or if accessed by a child thread
+     */
+    public static void markRollbackOnly() {
+        TransactionContext tx = getActiveContext();
+        if (tx == null) {
+            throw new IllegalStateException("No active transaction found to mark as rollback-only");
+        }
+        tx.setRollbackOnly();
+    }
+
+    private static Connection requireTransactionalConnection() {
+        return currentConnection().orElseThrow(() -> new IllegalStateException(
+                "No active transaction found in current scope. " +
+                "Either execute within a transaction scope, or provide a Connection or DataSource."
+        ));
     }
 
     // =========================================================================
@@ -71,9 +296,9 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes an arbitrary SQL statement, and safely closes the connection.
+     * Executes an arbitrary SQL statement using the active scoped transaction, or opens and closes a connection via {@code dataSource}.
      *
-     * @param dataSource the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sql        the SQL statement to execute
      * @param params     optional query parameters to bind
      * @return {@code true} if the first result is a {@link ResultSet}; {@code false} if it is an update count or there are no results
@@ -84,9 +309,9 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes an arbitrary SQL statement with a list of query parameters, and safely closes the connection.
+     * Executes an arbitrary SQL statement with a list of query parameters using the active scoped transaction or {@code dataSource}.
      *
-     * @param dataSource the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sql        the SQL statement to execute
      * @param params     the list of query parameters to bind
      * @return {@code true} if the first result is a {@link ResultSet}; {@code false} if it is an update count or there are no results
@@ -94,6 +319,32 @@ public final class Jdbc {
      */
     public static boolean execute(DataSource dataSource, String sql, List<?> params) throws WrappedSqlException {
         return withConnection(dataSource, conn -> execute(conn, sql, params));
+    }
+
+    /**
+     * Executes an arbitrary SQL statement using the ambient scoped transaction.
+     *
+     * @param sql    the SQL statement to execute
+     * @param params optional query parameters to bind
+     * @return {@code true} if the first result is a {@link ResultSet}; {@code false} if it is an update count or there are no results
+     * @throws IllegalStateException if no transaction is active in current scope
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static boolean execute(String sql, Object... params) throws WrappedSqlException {
+        return execute(requireTransactionalConnection(), sql, params);
+    }
+
+    /**
+     * Executes an arbitrary SQL statement with a list of parameters using the ambient scoped transaction.
+     *
+     * @param sql    the SQL statement to execute
+     * @param params the list of query parameters to bind
+     * @return {@code true} if the first result is a {@link ResultSet}; {@code false} if it is an update count or there are no results
+     * @throws IllegalStateException if no transaction is active in current scope
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static boolean execute(String sql, List<?> params) throws WrappedSqlException {
+        return execute(requireTransactionalConnection(), sql, params);
     }
 
     // =========================================================================
@@ -135,9 +386,9 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes an {@code INSERT}, {@code UPDATE}, or {@code DELETE} statement, and safely closes the connection.
+     * Executes an {@code INSERT}, {@code UPDATE}, or {@code DELETE} statement using the active scoped transaction or {@code dataSource}.
      *
-     * @param dataSource the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sql        the SQL statement to execute
      * @param params     optional query parameters to bind
      * @return the number of rows affected
@@ -148,9 +399,9 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes an {@code INSERT}, {@code UPDATE}, or {@code DELETE} statement with a list of parameters, and safely closes the connection.
+     * Executes an {@code INSERT}, {@code UPDATE}, or {@code DELETE} statement with a list of parameters using the active scoped transaction or {@code dataSource}.
      *
-     * @param dataSource the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sql        the SQL statement to execute
      * @param params     the list of query parameters to bind
      * @return the number of rows affected
@@ -158,6 +409,32 @@ public final class Jdbc {
      */
     public static int update(DataSource dataSource, String sql, List<?> params) throws WrappedSqlException {
         return withConnection(dataSource, conn -> update(conn, sql, params));
+    }
+
+    /**
+     * Executes an {@code INSERT}, {@code UPDATE}, or {@code DELETE} statement using the ambient scoped transaction.
+     *
+     * @param sql    the SQL statement to execute
+     * @param params optional query parameters to bind
+     * @return the number of rows affected
+     * @throws IllegalStateException if no transaction is active in current scope
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static int update(String sql, Object... params) throws WrappedSqlException {
+        return update(requireTransactionalConnection(), sql, params);
+    }
+
+    /**
+     * Executes an {@code INSERT}, {@code UPDATE}, or {@code DELETE} statement with a list of parameters using the ambient scoped transaction.
+     *
+     * @param sql    the SQL statement to execute
+     * @param params the list of query parameters to bind
+     * @return the number of rows affected
+     * @throws IllegalStateException if no transaction is active in current scope
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static int update(String sql, List<?> params) throws WrappedSqlException {
+        return update(requireTransactionalConnection(), sql, params);
     }
 
     /**
@@ -212,9 +489,9 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes a parameterized batch update, and safely closes the connection.
+     * Executes a parameterized batch update using the active scoped transaction or {@code dataSource}.
      *
-     * @param dataSource  the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource  the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sql         the parameterized SQL statement to execute
      * @param batchParams an iterable of parameter arrays or collections (one entry per batch row)
      * @return an array of update counts containing one element for each command in the batch
@@ -225,15 +502,40 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes a batch of static SQL statements, and safely closes the connection.
+     * Executes a batch of static SQL statements using the active scoped transaction or {@code dataSource}.
      *
-     * @param dataSource    the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource    the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sqlStatements the SQL statements to execute
      * @return an array of update counts containing one element for each command in the batch
      * @throws WrappedSqlException if a database access error occurs
      */
     public static int[] batchUpdate(DataSource dataSource, Iterable<String> sqlStatements) throws WrappedSqlException {
         return withConnection(dataSource, conn -> batchUpdate(conn, sqlStatements));
+    }
+
+    /**
+     * Executes a parameterized batch update using the ambient scoped transaction.
+     *
+     * @param sql         the parameterized SQL statement to execute
+     * @param batchParams an iterable of parameter arrays or collections (one entry per batch row)
+     * @return an array of update counts containing one element for each command in the batch
+     * @throws IllegalStateException if no transaction is active in current scope
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static int[] batchUpdate(String sql, Iterable<?> batchParams) throws WrappedSqlException {
+        return batchUpdate(requireTransactionalConnection(), sql, batchParams);
+    }
+
+    /**
+     * Executes a batch of static SQL statements using the ambient scoped transaction.
+     *
+     * @param sqlStatements the SQL statements to execute
+     * @return an array of update counts containing one element for each command in the batch
+     * @throws IllegalStateException if no transaction is active in current scope
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static int[] batchUpdate(Iterable<String> sqlStatements) throws WrappedSqlException {
+        return batchUpdate(requireTransactionalConnection(), sqlStatements);
     }
 
     // =========================================================================
@@ -296,10 +598,10 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes a query, maps rows using {@link RowMapper}, and safely closes the connection.
+     * Executes a query using the active scoped transaction or {@code dataSource}, mapping rows with {@link RowMapper}.
      *
      * @param <T>        the mapped result type
-     * @param dataSource the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sql        the SQL query to execute
      * @param mapper     the row mapper to apply to each row
      * @param params     optional query parameters to bind
@@ -316,10 +618,10 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes a query with a list of parameters, maps rows, and safely closes the connection.
+     * Executes a query with a list of parameters using the active scoped transaction or {@code dataSource}.
      *
      * @param <T>        the mapped result type
-     * @param dataSource the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sql        the SQL query to execute
      * @param mapper     the row mapper to apply to each row
      * @param params     the list of query parameters to bind
@@ -333,6 +635,44 @@ public final class Jdbc {
             List<?> params
     ) throws WrappedSqlException {
         return withConnection(dataSource, conn -> query(conn, sql, mapper, params));
+    }
+
+    /**
+     * Executes a query using the ambient scoped transaction, mapping rows with {@link RowMapper}.
+     *
+     * @param <T>    the mapped result type
+     * @param sql    the SQL query to execute
+     * @param mapper the row mapper to apply to each row
+     * @param params optional query parameters to bind
+     * @return an unmodifiable list of mapped results
+     * @throws IllegalStateException if no transaction is active in current scope
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static <T> List<T> query(
+            String sql,
+            RowMapper<T> mapper,
+            Object... params
+    ) throws WrappedSqlException {
+        return query(requireTransactionalConnection(), sql, mapper, params);
+    }
+
+    /**
+     * Executes a query with a list of parameters using the ambient scoped transaction.
+     *
+     * @param <T>    the mapped result type
+     * @param sql    the SQL query to execute
+     * @param mapper the row mapper to apply to each row
+     * @param params the list of query parameters to bind
+     * @return an unmodifiable list of mapped results
+     * @throws IllegalStateException if no transaction is active in current scope
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static <T> List<T> query(
+            String sql,
+            RowMapper<T> mapper,
+            List<?> params
+    ) throws WrappedSqlException {
+        return query(requireTransactionalConnection(), sql, mapper, params);
     }
 
     /**
@@ -396,10 +736,10 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes a query expecting at most one row, and safely closes the connection.
+     * Executes a query expecting at most one row using the active scoped transaction or {@code dataSource}.
      *
      * @param <T>        the mapped result type
-     * @param dataSource the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sql        the SQL query to execute
      * @param mapper     the row mapper to apply
      * @param params     optional query parameters to bind
@@ -417,10 +757,10 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes a query expecting at most one row with a list of parameters, and safely closes the connection.
+     * Executes a query expecting at most one row with a list of parameters using the active scoped transaction or {@code dataSource}.
      *
      * @param <T>        the mapped result type
-     * @param dataSource the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sql        the SQL query to execute
      * @param mapper     the row mapper to apply
      * @param params     the list of query parameters to bind
@@ -435,6 +775,44 @@ public final class Jdbc {
             List<?> params
     ) throws WrappedSqlException {
         return withConnection(dataSource, conn -> queryOne(conn, sql, mapper, params));
+    }
+
+    /**
+     * Executes a query expecting at most one row using the ambient scoped transaction.
+     *
+     * @param <T>    the mapped result type
+     * @param sql    the SQL query to execute
+     * @param mapper the row mapper to apply
+     * @param params optional query parameters to bind
+     * @return an {@link Optional} containing the mapped object if exactly one row was found, or {@link Optional#empty()}
+     * @throws IllegalStateException if no transaction is active or if more than one row is returned
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static <T> Optional<T> queryOne(
+            String sql,
+            RowMapper<T> mapper,
+            Object... params
+    ) throws WrappedSqlException {
+        return queryOne(requireTransactionalConnection(), sql, mapper, params);
+    }
+
+    /**
+     * Executes a query expecting at most one row with a list of parameters using the ambient scoped transaction.
+     *
+     * @param <T>    the mapped result type
+     * @param sql    the SQL query to execute
+     * @param mapper the row mapper to apply
+     * @param params the list of query parameters to bind
+     * @return an {@link Optional} containing the mapped object if exactly one row was found, or {@link Optional#empty()}
+     * @throws IllegalStateException if no transaction is active or if more than one row is returned
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static <T> Optional<T> queryOne(
+            String sql,
+            RowMapper<T> mapper,
+            List<?> params
+    ) throws WrappedSqlException {
+        return queryOne(requireTransactionalConnection(), sql, mapper, params);
     }
 
     /**
@@ -492,10 +870,10 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes a query returning the first row, and safely closes the connection.
+     * Executes a query returning the first row using the active scoped transaction or {@code dataSource}.
      *
      * @param <T>        the mapped result type
-     * @param dataSource the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sql        the SQL query to execute
      * @param mapper     the row mapper to apply
      * @param params     optional query parameters to bind
@@ -512,10 +890,10 @@ public final class Jdbc {
     }
 
     /**
-     * Obtains a connection from {@code dataSource}, executes a query with a list of parameters returning the first row, and safely closes the connection.
+     * Executes a query with a list of parameters returning the first row using the active scoped transaction or {@code dataSource}.
      *
      * @param <T>        the mapped result type
-     * @param dataSource the DataSource to obtain a connection from (safely closed afterward)
+     * @param dataSource the DataSource to obtain a connection from (or participate in if in a transaction)
      * @param sql        the SQL query to execute
      * @param mapper     the row mapper to apply
      * @param params     the list of query parameters to bind
@@ -531,6 +909,44 @@ public final class Jdbc {
         return withConnection(dataSource, conn -> queryFirst(conn, sql, mapper, params));
     }
 
+    /**
+     * Executes a query returning the first row using the ambient scoped transaction.
+     *
+     * @param <T>    the mapped result type
+     * @param sql    the SQL query to execute
+     * @param mapper the row mapper to apply
+     * @param params optional query parameters to bind
+     * @return an {@link Optional} containing the first mapped object, or {@link Optional#empty()} if no rows returned
+     * @throws IllegalStateException if no transaction is active in current scope
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static <T> Optional<T> queryFirst(
+            String sql,
+            RowMapper<T> mapper,
+            Object... params
+    ) throws WrappedSqlException {
+        return queryFirst(requireTransactionalConnection(), sql, mapper, params);
+    }
+
+    /**
+     * Executes a query with a list of parameters returning the first row using the ambient scoped transaction.
+     *
+     * @param <T>    the mapped result type
+     * @param sql    the SQL query to execute
+     * @param mapper the row mapper to apply
+     * @param params the list of query parameters to bind
+     * @return an {@link Optional} containing the first mapped object, or {@link Optional#empty()} if no rows returned
+     * @throws IllegalStateException if no transaction is active in current scope
+     * @throws WrappedSqlException   if a database access error occurs
+     */
+    public static <T> Optional<T> queryFirst(
+            String sql,
+            RowMapper<T> mapper,
+            List<?> params
+    ) throws WrappedSqlException {
+        return queryFirst(requireTransactionalConnection(), sql, mapper, params);
+    }
+
     // =========================================================================
     // DataSource & Connection Lifecycle Helper
     // =========================================================================
@@ -542,6 +958,12 @@ public final class Jdbc {
 
     private static <R> R withConnection(DataSource dataSource, ConnectionAction<R> action) throws WrappedSqlException {
         Validate.nonNull(dataSource, "dataSource");
+
+        TransactionContext tx = getActiveContext();
+        if (tx != null && tx.matches(dataSource)) {
+            return action.run(tx.getConnection());
+        }
+
         try (Connection connection = dataSource.getConnection()) {
             return action.run(connection);
         } catch (SQLException e) {
