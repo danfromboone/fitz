@@ -22,6 +22,7 @@ class MutableDataSourceSpec extends Specification {
         config.url == "jdbc:h2:mem:cfgtest"
         config.userName == "sa"
         config.password == "secret"
+        config.driverClassName == "org.h2.Driver"
         config.maximumPoolSize == 5
         config.minimumIdle == 5
         config.connectionTimeout == Duration.ofSeconds(30)
@@ -40,6 +41,30 @@ class MutableDataSourceSpec extends Specification {
 
         then:
         thrown(IllegalArgumentException)
+    }
+
+    def "DatabaseConfig auto-detects driver class name or accepts explicit driver"() {
+        expect:
+        DatabaseConfig.autoDetectDriverClassName("jdbc:h2:mem:test") == "org.h2.Driver"
+        DatabaseConfig.autoDetectDriverClassName("jdbc:postgresql://localhost/db") == "org.postgresql.Driver"
+        DatabaseConfig.autoDetectDriverClassName("jdbc:mysql://localhost/db") == "com.mysql.cj.jdbc.Driver"
+        DatabaseConfig.autoDetectDriverClassName("jdbc:mariadb://localhost/db") == "org.mariadb.jdbc.Driver"
+        DatabaseConfig.autoDetectDriverClassName("jdbc:oracle:thin:@localhost:1521:xe") == "oracle.jdbc.OracleDriver"
+        DatabaseConfig.autoDetectDriverClassName("jdbc:sqlserver://localhost:1433") == "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+        DatabaseConfig.autoDetectDriverClassName("jdbc:sqlite:test.db") == "org.sqlite.JDBC"
+        DatabaseConfig.autoDetectDriverClassName("jdbc:derby:memory:test") == "org.apache.derby.jdbc.EmbeddedDriver"
+        DatabaseConfig.autoDetectDriverClassName("jdbc:custom:foo") == null
+
+        when:
+        def explicit = DatabaseConfig.builder()
+                .url("jdbc:custom:foo")
+                .userName("sa")
+                .password("sa")
+                .driverClassName("org.custom.MyDriver")
+                .build()
+
+        then:
+        explicit.driverClassName == "org.custom.MyDriver"
     }
 
     def "MutableDataSource delegates JDBC connections to HikariDataSource and updates settings live in-place"() {

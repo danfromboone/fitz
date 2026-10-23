@@ -137,6 +137,18 @@ public class MutableDataSource implements DataSource, AutoCloseable {
         hikariConfig.setJdbcUrl(cfg.getUrl());
         hikariConfig.setUsername(cfg.getUserName());
         hikariConfig.setPassword(cfg.getPassword());
+        if (cfg.getDriverClassName() != null && !cfg.getDriverClassName().isBlank()) {
+            hikariConfig.setDriverClassName(cfg.getDriverClassName());
+            try {
+                ClassLoader cl = Thread.currentThread().getContextClassLoader();
+                if (cl != null) {
+                    Class.forName(cfg.getDriverClassName(), true, cl);
+                } else {
+                    Class.forName(cfg.getDriverClassName());
+                }
+            } catch (ClassNotFoundException ignored) {
+            }
+        }
         hikariConfig.setConnectionTimeout(cfg.getConnectionTimeout().toMillis());
         hikariConfig.setValidationTimeout(cfg.getValidationTimeout().toMillis());
         hikariConfig.setIdleTimeout(cfg.getIdleTimeout().toMillis());
