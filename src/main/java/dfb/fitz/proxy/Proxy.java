@@ -168,6 +168,60 @@ public final class Proxy {
     }
 
     /**
+     * Creates a builder for configuring an intercepting proxy with before, after, or around advice.
+     *
+     * @param <T>           the interface type
+     * @param interfaceType the interface to proxy
+     * @param target        the target instance
+     * @return a new builder
+     */
+    public static <T> InterceptingProxy.Builder<T> intercept(Class<T> interfaceType, T target) {
+        return InterceptingProxy.builder(interfaceType, target);
+    }
+
+    /**
+     * Creates a proxy executing the given {@link BeforeAdvice} before every method invocation.
+     */
+    public static <T> T before(Class<T> interfaceType, T target, BeforeAdvice advice) {
+        return InterceptingProxy.before(interfaceType, target, advice);
+    }
+
+    /**
+     * Creates a proxy executing the given {@link BeforeAdvice} before the named method.
+     */
+    public static <T> T before(Class<T> interfaceType, T target, String methodName, BeforeAdvice advice) {
+        return InterceptingProxy.before(interfaceType, target, methodName, advice);
+    }
+
+    /**
+     * Creates a proxy executing the given {@link AfterAdvice} after every method returns successfully.
+     */
+    public static <T> T after(Class<T> interfaceType, T target, AfterAdvice advice) {
+        return InterceptingProxy.after(interfaceType, target, advice);
+    }
+
+    /**
+     * Creates a proxy executing the given {@link AfterAdvice} after the named method returns successfully.
+     */
+    public static <T> T after(Class<T> interfaceType, T target, String methodName, AfterAdvice advice) {
+        return InterceptingProxy.after(interfaceType, target, methodName, advice);
+    }
+
+    /**
+     * Creates a proxy executing the given {@link AroundAdvice} around every method invocation.
+     */
+    public static <T> T around(Class<T> interfaceType, T target, AroundAdvice advice) {
+        return InterceptingProxy.around(interfaceType, target, advice);
+    }
+
+    /**
+     * Creates a proxy executing the given {@link AroundAdvice} around the named method.
+     */
+    public static <T> T around(Class<T> interfaceType, T target, String methodName, AroundAdvice advice) {
+        return InterceptingProxy.around(interfaceType, target, methodName, advice);
+    }
+
+    /**
      * Returns true if the specified object is a dynamic proxy instance.
      *
      * @param object the object to check
